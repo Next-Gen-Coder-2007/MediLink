@@ -1,0 +1,1003 @@
+from functools import wraps
+from flask import Flask, render_template, request, redirect, url_for, session, abort, flash
+from flask_login import LoginManager, login_user, logout_user, login_required, current_user, UserMixin
+from datetime import datetime
+from flask_sqlalchemy import SQLAlchemy
+import enum
+from flask_wtf import FlaskForm
+from wtforms import StringField, IntegerField, DecimalField, BooleanField, SelectField, FileField, SubmitField
+from wtforms.validators import DataRequired, Email, Length, Optional
+from flask_wtf.file import FileAllowed
+from PIL import Image
+import io
+import base64
+
+def compress_and_encode_image(photo, quality=40, max_width=800):
+    if not photo:
+        return None
+    img = Image.open(photo)
+    if img.mode == 'RGBA':
+        img = img.convert('RGB')
+    if img.width > max_width:
+        ratio = max_width / float(img.width)
+        new_height = int(img.height * ratio)
+        img = img.resize((max_width, new_height), Image.Resampling.LANCZOS)
+    img_io = io.BytesIO()
+    img.save(img_io, format='JPEG', quality=quality, optimize=True)
+    img_io.seek(0)
+    image_base64 = base64.b64encode(img_io.read()).decode('utf-8')
+    return image_base64
+
+app = Flask(__name__, template_folder="../frontend")
+app.secret_key = 'secret-code'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///hospital.db'
+
+db = SQLAlchemy(app)
+login_manager = LoginManager(app)
+login_manager.init_app(app)
+login_manager.login_view = 'login'
+
+# Enums for better data integrity
+class UserRole(enum.Enum):
+    ADMIN = "admin"
+    DOCTOR = "doctor"
+    NURSE = "nurse"
+    LAB_TECHNICIAN = "lab_technician"
+    PHARMACIST = "pharmacist"
+    PATIENT = "patient"
+
+class Gender(enum.Enum):
+    MALE = "male"
+    FEMALE = "female"
+    OTHER = "other"
+
+class AppointmentStatus(enum.Enum):
+    SCHEDULED = "scheduled"
+    CONFIRMED = "confirmed"
+    IN_PROGRESS = "in_progress"
+    COMPLETED = "completed"
+    CANCELLED = "cancelled"
+    NO_SHOW = "no_show"
+
+class PatientStatus(enum.Enum):
+    ADMITTED = "admitted"
+    DISCHARGED = "discharged"
+    UNDER_OBSERVATION = "under_observation"
+    EMERGENCY = "emergency"
+    OUTPATIENT = "outpatient"
+
+class LabTestStatus(enum.Enum):
+    REQUESTED = "requested"
+    IN_PROGRESS = "in_progress"
+    COMPLETED = "completed"
+    CANCELLED = "cancelled"
+
+class PrescriptionStatus(enum.Enum):
+    PRESCRIBED = "prescribed"
+    FULFILLED = "fulfilled"
+    PARTIALLY_FULFILLED = "partially_fulfilled"
+    CANCELLED = "cancelled"
+
+class BillStatus(enum.Enum):
+    PENDING = "pending"
+    PAID = "paid"
+    PARTIALLY_PAID = "partially_paid"
+    OVERDUE = "overdue"
+    CANCELLED = "cancelled"
+
+# Core User Management
+class User(db.Model, UserMixin):
+    __tablename__ = 'users'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(50), unique=True, nullable=False)
+    email = db.Column(db.String(100), nullable=False)
+    password_hash = db.Column(db.String(255), nullable=False)
+    role = db.Column(db.Enum(UserRole), nullable=False)
+    first_name = db.Column(db.String(50), nullable=False)
+    last_name = db.Column(db.String(50), nullable=False)
+    phone = db.Column(db.String(20))
+    is_active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    photo = db.Column(db.Text)
+
+    # Relationships
+    doctor_profile = db.relationship("Doctor", back_populates="user", uselist=False)
+    nurse_profile = db.relationship("Nurse", back_populates="user", uselist=False)
+    lab_technician_profile = db.relationship("LabTechnician", back_populates="user", uselist=False)
+    pharmacist_profile = db.relationship("Pharmacist", back_populates="user", uselist=False)
+    patient_profile = db.relationship("Patient", back_populates="user", uselist=False)
+
+# Hospital Structure
+class Department(db.Model):
+    __tablename__ = 'departments'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    description = db.Column(db.Text)
+    head_doctor_id = db.Column(db.Integer, db.ForeignKey('doctors.id'))
+    is_active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    head_doctor = db.relationship("Doctor", foreign_keys=[head_doctor_id])
+    doctors = db.relationship("Doctor", back_populates="department", foreign_keys="Doctor.department_id")
+    nurses = db.relationship("Nurse", back_populates="department")
+
+class Ward(db.Model):
+    __tablename__ = 'wards'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    department_id = db.Column(db.Integer, db.ForeignKey('departments.id'))
+    capacity = db.Column(db.Integer, nullable=False)
+    current_occupancy = db.Column(db.Integer, default=0)
+    is_active = db.Column(db.Boolean, default=True)
+    
+    # Relationships
+    department = db.relationship("Department")
+    nurses = db.relationship("Nurse", back_populates="ward")
+    patient_admissions = db.relationship("PatientAdmission", back_populates="ward")
+
+# Staff Profiles
+class Doctor(db.Model):
+    __tablename__ = 'doctors'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), unique=True)
+    license_number = db.Column(db.String(50), unique=True, nullable=False)
+    specialization = db.Column(db.String(100))
+    department_id = db.Column(db.Integer, db.ForeignKey('departments.id'))
+    qualification = db.Column(db.String(200))
+    experience_years = db.Column(db.Integer)
+    consultation_fee = db.Column(db.Numeric(10, 2))
+    is_available = db.Column(db.Boolean, default=True)
+    
+    # Relationships
+    user = db.relationship("User", back_populates="doctor_profile")
+    department = db.relationship("Department", back_populates="doctors", foreign_keys=[department_id])
+    appointments = db.relationship("Appointment", back_populates="doctor")
+    prescriptions = db.relationship("Prescription", back_populates="doctor")
+    diagnoses = db.relationship("Diagnosis", back_populates="doctor")
+
+class Nurse(db.Model):
+    __tablename__ = 'nurses'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), unique=True)
+    license_number = db.Column(db.String(50), unique=True)
+    department_id = db.Column(db.Integer, db.ForeignKey('departments.id'))
+    ward_id = db.Column(db.Integer, db.ForeignKey('wards.id'))
+    shift = db.Column(db.String(20))  # morning, evening, night
+    is_available = db.Column(db.Boolean, default=True)
+    
+    # Relationships
+    user = db.relationship("User", back_populates="nurse_profile")
+    department = db.relationship("Department", back_populates="nurses")
+    ward = db.relationship("Ward", back_populates="nurses")
+    vital_records = db.relationship("VitalRecord", back_populates="nurse")
+
+class LabTechnician(db.Model):
+    __tablename__ = 'lab_technicians'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), unique=True)
+    license_number = db.Column(db.String(50))
+    specialization = db.Column(db.String(100))
+    is_available = db.Column(db.Boolean, default=True)
+    
+    # Relationships
+    user = db.relationship("User", back_populates="lab_technician_profile")
+    lab_tests = db.relationship("LabTest", back_populates="technician")
+
+class Pharmacist(db.Model):
+    __tablename__ = 'pharmacists'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), unique=True)
+    license_number = db.Column(db.String(50), unique=True)
+    is_available = db.Column(db.Boolean, default=True)
+    
+    # Relationships
+    user = db.relationship("User", back_populates="pharmacist_profile")
+    prescription_fulfillments = db.relationship("PrescriptionFulfillment", back_populates="pharmacist")
+
+# Patient Management
+class Patient(db.Model):
+    __tablename__ = 'patients'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), unique=True)
+    date_of_birth = db.Column(db.Date)
+    gender = db.Column(db.Enum(Gender))
+    blood_group = db.Column(db.String(5))
+    address = db.Column(db.Text)
+    emergency_contact_name = db.Column(db.String(100))
+    emergency_contact_phone = db.Column(db.String(20))
+    insurance_number = db.Column(db.String(50))
+    status = db.Column(db.Enum(PatientStatus), default=PatientStatus.OUTPATIENT)
+    registered_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    user = db.relationship("User", back_populates="patient_profile")
+    appointments = db.relationship("Appointment", back_populates="patient")
+    admissions = db.relationship("PatientAdmission", back_populates="patient")
+    vital_records = db.relationship("VitalRecord", back_populates="patient")
+    diagnoses = db.relationship("Diagnosis", back_populates="patient")
+    prescriptions = db.relationship("Prescription", back_populates="patient")
+    lab_tests = db.relationship("LabTest", back_populates="patient")
+    bills = db.relationship("Bill", back_populates="patient")
+
+class PatientAdmission(db.Model):
+    __tablename__ = 'patient_admissions'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    patient_id = db.Column(db.Integer, db.ForeignKey('patients.id'))
+    ward_id = db.Column(db.Integer, db.ForeignKey('wards.id'))
+    bed_number = db.Column(db.String(10))
+    admission_date = db.Column(db.DateTime, default=datetime.utcnow)
+    discharge_date = db.Column(db.DateTime)
+    reason = db.Column(db.Text)
+    is_active = db.Column(db.Boolean, default=True)
+    
+    # Relationships
+    patient = db.relationship("Patient", back_populates="admissions")
+    ward = db.relationship("Ward", back_populates="patient_admissions")
+
+# Appointments
+class Appointment(db.Model):
+    __tablename__ = 'appointments'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    patient_id = db.Column(db.Integer, db.ForeignKey('patients.id'))
+    doctor_id = db.Column(db.Integer, db.ForeignKey('doctors.id'))
+    appointment_date = db.Column(db.Date, nullable=False)
+    appointment_time = db.Column(db.Time, nullable=False)
+    status = db.Column(db.Enum(AppointmentStatus), default=AppointmentStatus.SCHEDULED)
+    reason = db.Column(db.Text)
+    notes = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    patient = db.relationship("Patient", back_populates="appointments")
+    doctor = db.relationship("Doctor", back_populates="appointments")
+
+# Medical Records
+class VitalRecord(db.Model):
+    __tablename__ = 'vital_records'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    patient_id = db.Column(db.Integer, db.ForeignKey('patients.id'))
+    nurse_id = db.Column(db.Integer, db.ForeignKey('nurses.id'))
+    temperature = db.Column(db.Numeric(4, 1))  # Celsius
+    blood_pressure_systolic = db.Column(db.Integer)
+    blood_pressure_diastolic = db.Column(db.Integer)
+    heart_rate = db.Column(db.Integer)
+    respiratory_rate = db.Column(db.Integer)
+    oxygen_saturation = db.Column(db.Numeric(5, 2))
+    weight = db.Column(db.Numeric(5, 2))  # kg
+    height = db.Column(db.Numeric(5, 2))  # cm
+    notes = db.Column(db.Text)
+    recorded_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    patient = db.relationship("Patient", back_populates="vital_records")
+    nurse = db.relationship("Nurse", back_populates="vital_records")
+
+class Diagnosis(db.Model):
+    __tablename__ = 'diagnoses'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    patient_id = db.Column(db.Integer, db.ForeignKey('patients.id'))
+    doctor_id = db.Column(db.Integer, db.ForeignKey('doctors.id'))
+    appointment_id = db.Column(db.Integer, db.ForeignKey('appointments.id'))
+    diagnosis_code = db.Column(db.String(20))  # ICD-10 code
+    diagnosis_description = db.Column(db.Text, nullable=False)
+    symptoms = db.Column(db.Text)
+    treatment_plan = db.Column(db.Text)
+    follow_up_date = db.Column(db.Date)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    patient = db.relationship("Patient", back_populates="diagnoses")
+    doctor = db.relationship("Doctor", back_populates="diagnoses")
+    appointment = db.relationship("Appointment")
+
+# Pharmacy Management
+class Medicine(db.Model):
+    __tablename__ = 'medicines'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(200), nullable=False)
+    generic_name = db.Column(db.String(200))
+    manufacturer = db.Column(db.String(100))
+    dosage_form = db.Column(db.String(50))  # tablet, capsule, syrup, etc.
+    strength = db.Column(db.String(50))  # 500mg, 10ml, etc.
+    unit_price = db.Column(db.Numeric(10, 2), nullable=False)
+    is_active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    stock_entries = db.relationship("MedicineStock", back_populates="medicine")
+    prescription_items = db.relationship("PrescriptionItem", back_populates="medicine")
+
+class MedicineStock(db.Model):
+    __tablename__ = 'medicine_stock'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    medicine_id = db.Column(db.Integer, db.ForeignKey('medicines.id'))
+    batch_number = db.Column(db.String(50), nullable=False)
+    expiry_date = db.Column(db.Date, nullable=False)
+    quantity_received = db.Column(db.Integer, nullable=False)
+    quantity_available = db.Column(db.Integer, nullable=False)
+    unit_cost = db.Column(db.Numeric(10, 2))
+    supplier = db.Column(db.String(100))
+    received_date = db.Column(db.Date, default=datetime.utcnow)
+    
+    # Relationships
+    medicine = db.relationship("Medicine", back_populates="stock_entries")
+
+class Prescription(db.Model):
+    __tablename__ = 'prescriptions'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    patient_id = db.Column(db.Integer, db.ForeignKey('patients.id'))
+    doctor_id = db.Column(db.Integer, db.ForeignKey('doctors.id'))
+    appointment_id = db.Column(db.Integer, db.ForeignKey('appointments.id'))
+    prescription_date = db.Column(db.Date, default=datetime.utcnow)
+    status = db.Column(db.Enum(PrescriptionStatus), default=PrescriptionStatus.PRESCRIBED)
+    notes = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    patient = db.relationship("Patient", back_populates="prescriptions")
+    doctor = db.relationship("Doctor", back_populates="prescriptions")
+    appointment = db.relationship("Appointment")
+    items = db.relationship("PrescriptionItem", back_populates="prescription")
+    fulfillments = db.relationship("PrescriptionFulfillment", back_populates="prescription")
+
+class PrescriptionItem(db.Model):
+    __tablename__ = 'prescription_items'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    prescription_id = db.Column(db.Integer, db.ForeignKey('prescriptions.id'))
+    medicine_id = db.Column(db.Integer, db.ForeignKey('medicines.id'))
+    dosage = db.Column(db.String(100), nullable=False)  # "1 tablet twice daily"
+    quantity = db.Column(db.Integer, nullable=False)
+    duration_days = db.Column(db.Integer)
+    instructions = db.Column(db.Text)
+    
+    # Relationships
+    prescription = db.relationship("Prescription", back_populates="items")
+    medicine = db.relationship("Medicine", back_populates="prescription_items")
+
+class PrescriptionFulfillment(db.Model):
+    __tablename__ = 'prescription_fulfillments'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    prescription_id = db.Column(db.Integer, db.ForeignKey('prescriptions.id'))
+    pharmacist_id = db.Column(db.Integer, db.ForeignKey('pharmacists.id'))
+    fulfilled_date = db.Column(db.DateTime, default=datetime.utcnow)
+    notes = db.Column(db.Text)
+    
+    # Relationships
+    prescription = db.relationship("Prescription", back_populates="fulfillments")
+    pharmacist = db.relationship("Pharmacist", back_populates="prescription_fulfillments")
+
+# Laboratory Management
+class LabTestType(db.Model):
+    __tablename__ = 'lab_test_types'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text)
+    price = db.Column(db.Numeric(10, 2), nullable=False)
+    normal_range = db.Column(db.String(100))
+    unit = db.Column(db.String(20))
+    sample_type = db.Column(db.String(50))  # blood, urine, stool, etc.
+    is_active = db.Column(db.Boolean, default=True)
+    
+    # Relationships
+    lab_tests = db.relationship("LabTest", back_populates="test_type")
+
+class LabTest(db.Model):
+    __tablename__ = 'lab_tests'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    patient_id = db.Column(db.Integer, db.ForeignKey('patients.id'))
+    doctor_id = db.Column(db.Integer, db.ForeignKey('doctors.id'))
+    technician_id = db.Column(db.Integer, db.ForeignKey('lab_technicians.id'))
+    test_type_id = db.Column(db.Integer, db.ForeignKey('lab_test_types.id'))
+    appointment_id = db.Column(db.Integer, db.ForeignKey('appointments.id'))
+    requested_date = db.Column(db.DateTime, default=datetime.utcnow)
+    sample_collected_date = db.Column(db.DateTime)
+    completed_date = db.Column(db.DateTime)
+    status = db.Column(db.Enum(LabTestStatus), default=LabTestStatus.REQUESTED)
+    result_value = db.Column(db.String(100))
+    result_notes = db.Column(db.Text)
+    result_file_path = db.Column(db.String(500))  # Path to uploaded PDF/image
+    is_abnormal = db.Column(db.Boolean, default=False)
+    
+    # Relationships
+    patient = db.relationship("Patient", back_populates="lab_tests")
+    doctor = db.relationship("Doctor")
+    technician = db.relationship("LabTechnician", back_populates="lab_tests")
+    test_type = db.relationship("LabTestType", back_populates="lab_tests")
+    appointment = db.relationship("Appointment")
+
+# Billing System
+class Bill(db.Model):
+    __tablename__ = 'bills'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    patient_id = db.Column(db.Integer, db.ForeignKey('patients.id'))
+    bill_number = db.Column(db.String(50), unique=True, nullable=False)
+    bill_date = db.Column(db.Date, default=datetime.utcnow)
+    total_amount = db.Column(db.Numeric(12, 2), nullable=False)
+    paid_amount = db.Column(db.Numeric(12, 2), default=0)
+    discount_amount = db.Column(db.Numeric(12, 2), default=0)
+    status = db.Column(db.Enum(BillStatus), default=BillStatus.PENDING)
+    due_date = db.Column(db.Date)
+    notes = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    patient = db.relationship("Patient", back_populates="bills")
+    items = db.relationship("BillItem", back_populates="bill")
+    payments = db.relationship("Payment", back_populates="bill")
+
+class BillItem(db.Model):
+    __tablename__ = 'bill_items'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    bill_id = db.Column(db.Integer, db.ForeignKey('bills.id'))
+    description = db.Column(db.String(200), nullable=False)
+    item_type = db.Column(db.String(50))  # consultation, medicine, lab_test, procedure
+    quantity = db.Column(db.Integer, default=1)
+    unit_price = db.Column(db.Numeric(10, 2), nullable=False)
+    total_price = db.Column(db.Numeric(10, 2), nullable=False)
+    reference_id = db.Column(db.Integer)  # ID of related appointment, prescription, lab_test
+    
+    # Relationships
+    bill = db.relationship("Bill", back_populates="items")
+
+class Payment(db.Model):
+    __tablename__ = 'payments'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    bill_id = db.Column(db.Integer, db.ForeignKey('bills.id'))
+    amount = db.Column(db.Numeric(12, 2), nullable=False)
+    payment_method = db.Column(db.String(50))  # cash, card, online, insurance
+    payment_date = db.Column(db.DateTime, default=datetime.utcnow)
+    transaction_reference = db.Column(db.String(100))
+    notes = db.Column(db.Text)
+    
+    # Relationships
+    bill = db.relationship("Bill", back_populates="payments")
+
+# System Configuration and Analytics
+class SystemConfig(db.Model):
+    __tablename__ = 'system_config'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    key = db.Column(db.String(100), unique=True, nullable=False)
+    value = db.Column(db.Text)
+    description = db.Column(db.Text)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+class AuditLog(db.Model):
+    __tablename__ = 'audit_logs'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    action = db.Column(db.String(100), nullable=False)
+    table_name = db.Column(db.String(50))
+    record_id = db.Column(db.Integer)
+    old_values = db.Column(db.Text)  # JSON string
+    new_values = db.Column(db.Text)  # JSON string
+    ip_address = db.Column(db.String(45))
+    user_agent = db.Column(db.Text)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    user = db.relationship("User")
+
+def role_required(role):
+    def decorator(f):
+        @wraps(f)
+        def wrapper(*args, **kwargs):
+            if not current_user.is_authenticated or current_user.role != role:
+                flash("You don't have permission to access this page.", "warning")
+                return redirect(request.referrer or url_for('home'))
+            return f(*args, **kwargs)
+        return wrapper
+    return decorator
+
+
+@login_manager.user_loader
+def load_user(user_id):
+    return User.query.get(int(user_id))
+
+@app.route("/")
+def home():
+    if current_user.is_authenticated:
+        logout_user()
+    return render_template("home.html")
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if current_user.is_authenticated:
+        logout_user()
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+
+        # Query the database for the user
+        user = User.query.filter_by(username=username).first()
+        print(f"User found: {user}")  # Debug print
+
+        # Check if the user exists and the password is correct
+        if user and user.password_hash == password:
+            login_user(user)
+            flash('Logged in successfully!','success')
+
+            # Redirect based on user role
+            if user.role == UserRole.ADMIN:
+                return redirect(url_for('admin'))
+            elif user.role == UserRole.DOCTOR:
+                user = User.query.filter_by(username=username).first()
+                return redirect(url_for('doctor', user_id=user.id))
+            elif user.role == UserRole.NURSE:
+                return redirect(url_for('nurse_dashboard'))
+            elif user.role == UserRole.LAB_TECHNICIAN:
+                return redirect(url_for('lab_technician_dashboard'))
+            elif user.role == UserRole.PHARMACIST:
+                return redirect(url_for('pharmacist_dashboard'))
+            elif user.role == UserRole.PATIENT:
+                return redirect(url_for('patient_dashboard'))
+        else:
+            flash('Invalid username or password')
+
+    return render_template('login.html')
+
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if request.method == 'POST':
+        try:
+            # Core User Fields
+            username = request.form['username']
+            email = request.form['email']
+            password_hash = request.form['password']
+            first_name = request.form['first_name']
+            last_name = request.form['last_name']
+            phone = request.form.get('phone')
+
+            # Patient Fields
+            date_of_birth = request.form.get('date_of_birth')
+            gender = request.form.get('gender')
+            blood_group = request.form.get('blood_group')
+            address = request.form.get('address')
+            emergency_contact_name = request.form.get('emergency_contact_name')
+            emergency_contact_phone = request.form.get('emergency_contact_phone')
+            insurance_number = request.form.get('insurance_number')
+
+            if gender and gender.upper() in Gender.__members__:
+                gender_enum = Gender[gender.upper()]
+            else:
+                flash("Invalid or missing gender.", "danger")
+                return redirect(url_for('register'))
+
+            if User.query.filter_by(username=username).first() or User.query.filter_by(email=email).first():
+                flash("Username or Email already exists", "danger")
+                return redirect(url_for('register'))
+
+            photo = request.files.get('photo')
+            photo_data = compress_and_encode_image(photo)
+
+            user = User(
+                username=username,
+                email=email,
+                password_hash=password_hash,
+                role=UserRole.PATIENT,
+                first_name=first_name,
+                last_name=last_name,
+                phone=phone,
+                photo=photo_data
+            )
+            db.session.add(user)
+            db.session.flush()
+
+            patient = Patient(
+                user_id=user.id,
+                date_of_birth=datetime.strptime(date_of_birth, '%Y-%m-%d') if date_of_birth else None,
+                gender=gender_enum,
+                blood_group=blood_group,
+                address=address,
+                emergency_contact_name=emergency_contact_name,
+                emergency_contact_phone=emergency_contact_phone,
+                insurance_number=insurance_number,
+                status=PatientStatus.OUTPATIENT,
+                registered_at=datetime.utcnow()
+            )
+            db.session.add(patient)
+
+            db.session.commit()
+            flash("Registration successful!", "success")
+            return redirect(url_for('login'))
+
+        except Exception as e:
+            db.session.rollback()
+            flash(f"Error during registration: {str(e)}", "danger")
+            return redirect(url_for('register'))
+
+    return render_template('register.html')
+
+@app.route("/admin")
+@login_required
+@role_required(UserRole.ADMIN)
+def admin():
+    return render_template("admin/admin_home.html")
+
+# Admin Routes for Doctor Management
+@app.route('/admin/doctors')
+@login_required
+@role_required(UserRole.ADMIN)
+def admin_doctors():
+    doctors = Doctor.query.all()
+    return render_template('admin/admin_doctors.html', doctors=doctors)
+
+@app.route('/admin/doctors/create', methods=['GET', 'POST'])
+@role_required(UserRole.ADMIN)
+def admin_doctors_create():
+    try:
+        if request.method == 'POST':
+            username = request.form['username']
+            email = request.form['email']
+            password_hash = request.form['password']
+            first_name = request.form['first_name']
+            last_name = request.form['last_name']
+            phone = request.form['phone']
+            photo = request.files.get('photo')
+
+            license_number = request.form['license_number']
+            specialization = request.form['specialization']
+            department_id = request.form['department_id']
+            qualification = request.form['qualification']
+            experience_years = request.form['experience_years']
+            consultation_fee = request.form['consultation_fee']
+
+            photo_data = compress_and_encode_image(photo)
+            if User.query.filter_by(username = username).first():
+                flash("User name already Registered", 'warning')
+                return redirect(url_for('admin_doctors'))
+            
+            new_user = User(
+                username=username,
+                email=email,
+                password_hash=password_hash,
+                role=UserRole.DOCTOR,
+                first_name=first_name,
+                last_name=last_name,
+                phone=phone,
+                is_active=True,
+                photo=photo_data
+            )
+            db.session.add(new_user)
+            db.session.flush()
+
+            new_doctor = Doctor(
+                user_id=new_user.id,
+                license_number=license_number,
+                specialization=specialization,
+                department_id=department_id,
+                qualification=qualification,
+                experience_years=experience_years,
+                consultation_fee=consultation_fee,
+                is_available=True
+            )
+            db.session.add(new_doctor)
+            db.session.commit()
+            flash('Doctor created successfully!', 'success')
+            return redirect(url_for('admin_doctors'))
+    except Exception as e:
+        db.session.rollback()
+        flash(f"Error during registration: {str(e)}", "danger")
+        return redirect(url_for('admin_doctors'))
+
+@app.route('/admin/doctors/<int:doctor_id>/edit', methods=['GET', 'POST'])
+@role_required(UserRole.ADMIN)
+def admin_doctors_edit(doctor_id):
+    doctor = Doctor.query.get_or_404(doctor_id)
+    if request.method == 'POST':
+        doctor.user_id = request.form['user_id']
+        doctor.license_number = request.form['license_number']
+        doctor.specialization = request.form['specialization']
+        doctor.department_id = request.form['department_id']
+        doctor.qualification = request.form['qualification']
+        doctor.experience_years = request.form['experience_years']
+        doctor.consultation_fee = request.form['consultation_fee']
+        doctor.is_available = 'is_available' in request.form
+
+        db.session.commit()
+        flash('Doctor updated successfully!', 'success')
+        return redirect(url_for('admin_doctors'))
+
+@app.route('/admin/doctors/<int:doctor_id>/delete', methods=['POST'])
+@role_required(UserRole.ADMIN)
+def admin_doctors_delete(doctor_id):
+    doctor = Doctor.query.get_or_404(doctor_id)
+    doctor.user.is_active = False
+    db.session.commit()
+    flash('Doctor deleted successfully!', 'success')
+    return redirect(url_for('admin_doctors'))
+
+@app.route("/admin/doctors/<int:doctor_id>")
+@login_required
+@role_required(UserRole.ADMIN)
+def admin_doctor_view(doctor_id):
+    doctor = Doctor.query.get_or_404(doctor_id)
+    return render_template('admin/admin_doctor_view.html', doctor=doctor)
+
+@app.route('/admin/nurses')
+@role_required(UserRole.ADMIN)
+def admin_nurses():
+    nurses = Nurse.query.all()
+    return render_template('admin/admin_nurses.html', nurses=nurses)
+
+@app.route('/admin/nurses/create', methods=['GET', 'POST'])
+@role_required(UserRole.ADMIN)
+def admin_nurses_create():
+    if request.method == 'POST':
+        username = request.form['username']
+        email = request.form['email']
+        password_hash = request.form['password_hash']
+        role = UserRole(request.form['role'])
+        first_name = request.form['first_name']
+        last_name = request.form['last_name']
+        phone = request.form['phone']
+        photo = request.files.get('photo')
+        is_active = True
+
+        license_number = request.form['license_number']
+        department_id = request.form['department_id']
+        ward_id = request.form['ward_id']
+        shift = request.form['shift']
+        is_available = 'is_available' in request.form
+
+        photo_data = compress_and_encode_image(photo)
+
+        new_user = User(
+            username=username,
+            email=email,
+            password_hash=password_hash,
+            role=role,
+            first_name=first_name,
+            last_name=last_name,
+            phone=phone,
+            is_active=is_active,
+            photo=photo_data
+        )
+        db.session.add(new_user)
+        db.session.commit()
+
+        new_nurse = Nurse(
+            user_id=new_user.id,
+            license_number=license_number,
+            department_id=department_id,
+            ward_id=ward_id,
+            shift=shift,
+            is_available=is_available
+        )
+        db.session.add(new_nurse)
+        db.session.commit()
+        flash('Nurse created successfully!', 'success')
+        return redirect(url_for('admin_nurses'))
+
+@app.route('/admin/nurses/<int:nurse_id>/edit', methods=['GET', 'POST'])
+@role_required(UserRole.ADMIN)
+def admin_nurses_edit(nurse_id):
+    nurse = Nurse.query.get_or_404(nurse_id)
+    if request.method == 'POST':
+        nurse.user_id = request.form['user_id']
+        nurse.license_number = request.form['license_number']
+        nurse.department_id = request.form['department_id']
+        nurse.ward_id = request.form['ward_id']
+        nurse.shift = request.form['shift']
+        nurse.is_available = 'is_available' in request.form
+
+        db.session.commit()
+        flash('Nurse updated successfully!', 'success')
+        return redirect(url_for('admin_nurses'))
+
+
+@app.route('/admin/nurses/<int:nurse_id>/delete', methods=['POST'])
+@role_required(UserRole.ADMIN)
+def admin_nurses_delete(nurse_id):
+    nurse = Nurse.query.get_or_404(nurse_id)
+    db.session.delete(nurse)
+    db.session.commit()
+    flash('Nurse deleted successfully!', 'success')
+    return redirect(url_for('admin_nurses'))
+
+# Admin Routes for Department Management
+@app.route('/admin/departments')
+@role_required(UserRole.ADMIN)
+def admin_departments():
+    doctors = Doctor.query.all()
+    departments = Department.query.all()
+    return render_template('admin/admin_departments.html', departments=departments, doctors=doctors)
+
+
+@app.route('/admin/departments/create', methods=['GET', 'POST'])
+@role_required(UserRole.ADMIN)
+def admin_departments_create():
+    if request.method == 'POST':
+        name = request.form['departmentName']
+        description = request.form['departmentDescription']
+        head_doctor_id = request.form['headDoctor']
+        is_active = bool(request.form['isActive'])
+
+        new_department = Department(
+            name=name,
+            description=description,
+            head_doctor_id=head_doctor_id,
+            is_active=is_active
+        )
+        db.session.add(new_department)
+        db.session.commit()
+        flash('Department created successfully!', 'success')
+        return redirect(url_for('admin_departments'))
+
+
+@app.route('/admin/departments/<int:department_id>/edit', methods=['GET', 'POST'])
+@role_required(UserRole.ADMIN)
+def admin_departments_edit(department_id):
+    department = Department.query.get_or_404(department_id)
+    if request.method == 'POST':
+        department.name = request.form['departmentName']
+        department.description = request.form['departmentDescription']
+        department.head_doctor_id = request.form['headDoctor']
+        department.is_active = bool(int(request.form['isActive']))
+        print(bool(request.form['isActive']))
+        db.session.commit()
+        flash('Department updated successfully!', 'success')
+        return redirect(url_for('admin_departments'))
+
+@app.route('/admin/departments/<int:department_id>/delete', methods=['POST'])
+@role_required(UserRole.ADMIN)
+def admin_departments_delete(department_id):
+    department = Department.query.get_or_404(department_id)
+    db.session.delete(department)
+    db.session.commit()
+    flash('Department deleted successfully!', 'success')
+    return redirect(url_for('admin_departments'))
+
+# Admin Routes for Ward Management
+@app.route('/admin/wards')
+@login_required
+@role_required(UserRole.ADMIN)
+def admin_wards():
+    wards = Ward.query.all()
+    departments = Department.query.all()
+    total_beds = sum(ward.capacity for ward in wards)
+    occupied_beds = sum(ward.current_occupancy for ward in wards)
+    return render_template('admin/admin_wards.html',
+                         wards=wards,
+                         departments=departments,
+                         total_beds=total_beds,
+                         occupied_beds=occupied_beds)
+
+@app.route('/admin/wards/create', methods=['GET', 'POST'])
+@login_required
+@role_required(UserRole.ADMIN)
+def admin_wards_create():
+    name = request.form.get('wardName')
+    department_id = request.form.get('department')
+    capacity = int(request.form.get('capacity'))
+    is_active = bool(int(request.form['isActive']))
+
+    new_ward = Ward(
+        name=name,
+        department_id=department_id,
+        capacity=capacity,
+        is_active=is_active,
+        current_occupancy=0
+    )
+
+    db.session.add(new_ward)
+    db.session.commit()
+    flash('Ward created successfully', 'success')
+    return redirect(url_for('admin_wards'))
+
+@app.route('/admin/wards/<int:ward_id>/edit', methods=['GET', 'POST'])
+@role_required(UserRole.ADMIN)
+def admin_wards_edit(ward_id):
+    ward = Ward.query.get_or_404(ward_id)
+    if request.method == 'POST':
+        ward.name = request.form['name']
+        ward.department_id = request.form['department_id']
+        ward.capacity = request.form['capacity']
+        ward.current_occupancy = request.form['current_occupancy']
+        ward.is_active = 'isActive' in request.form
+
+        db.session.commit()
+        flash('Ward updated successfully!', 'success')
+        return redirect(url_for('admin_wards'))
+
+    return render_template('admin/ward_edit.html', ward=ward)
+
+@app.route('/admin/wards/<int:ward_id>/delete', methods=['POST'])
+@role_required(UserRole.ADMIN)
+def admin_wards_delete(ward_id):
+    ward = Ward.query.get_or_404(ward_id)
+    db.session.delete(ward)
+    db.session.commit()
+    flash('Ward deleted successfully!', 'success')
+    return redirect(url_for('admin_wards'))
+
+@app.route('/admin/pharmacy', methods=['GET', 'POST'])
+def admin_pharmacists():
+    if request.method == 'POST':
+        username = request.form['username']
+        email = request.form['email']
+        password = request.form['password']
+        license_number = request.form['license_number']
+
+        user = User(username=username, email=email, password=password, role=UserRole.PHARMACIST)
+        db.session.add(user)
+        db.session.commit()
+
+        pharmacist = Pharmacist(user_id=user.id, license_number=license_number)
+        db.session.add(pharmacist)
+        db.session.commit()
+
+        flash('Pharmacist added successfully!', 'success')
+        return redirect(url_for('admin_pharmacists'))
+
+    pharmacists = Pharmacist.query.all()
+    return render_template('admin/admin_pharmacy.html', pharmacists=pharmacists)
+
+
+@app.route('/doctor/<int:user_id>')
+@login_required
+@role_required(UserRole.DOCTOR)
+def doctor(user_id):
+    doctor = Doctor.query.filter_by(user_id = user_id).first()
+    return render_template('doctor/doctor_home.html',doctor = doctor)
+
+@app.route('/logout')
+@login_required
+def logout():
+    logout_user()
+    flash('Logged out successfully.', 'info')
+    return redirect(url_for('home'))
+
+if __name__ == '__main__':
+    with app.app_context():
+        db.create_all()
+        admin_exists = User.query.filter_by(role=UserRole.ADMIN).first()
+
+        if not admin_exists:
+            admin = User(
+                username='admin',
+                email='admin@example.com',
+                password_hash="password",  # Change this to a secure password
+                role=UserRole.ADMIN,
+                first_name='Admin',
+                last_name='User',
+                phone='1234567890',
+                is_active=True
+            )
+
+            # Add the admin user to the database
+            db.session.add(admin)
+            db.session.commit()
+            print("Admin user created successfully.")
+        else:
+            print("Admin user already exists.")
+    app.run(debug=True)
