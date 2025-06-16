@@ -1,0 +1,804 @@
+{% extends 'admin/admin_base.html' %}
+
+{% block admin_css %}
+<style>
+    .header-section {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 30px;
+        padding-bottom: 15px;
+        border-bottom: 2px solid #e0e0e0;
+    }
+    
+    .page-title {
+        font-size: 28px;
+        font-weight: bold;
+        color: #2c5530;
+        margin: 0;
+    }
+    
+    .add-btn {
+        background: linear-gradient(135deg, #4CAF50, #45a049);
+        color: white;
+        padding: 12px 24px;
+        border: none;
+        border-radius: 25px;
+        cursor: pointer;
+        font-size: 16px;
+        font-weight: bold;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
+    }
+    
+    .add-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(76, 175, 80, 0.4);
+    }
+    
+    .stats-container {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 20px;
+        margin-bottom: 30px;
+    }
+    
+    .stat-card {
+        background: linear-gradient(135deg, #fff, #f8f9fa);
+        padding: 25px;
+        border-radius: 15px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        border-left: 5px solid #4CAF50;
+        transition: transform 0.3s ease;
+    }
+    
+    .stat-card:hover {
+        transform: translateY(-5px);
+    }
+    
+    .stat-number {
+        font-size: 36px;
+        font-weight: bold;
+        color: #4CAF50;
+        margin-bottom: 5px;
+    }
+    
+    .stat-label {
+        font-size: 14px;
+        color: #666;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+    
+    .search-filter-section {
+        background: white;
+        padding: 20px;
+        border-radius: 15px;
+        box-shadow: 0 3px 15px rgba(0,0,0,0.1);
+        margin-bottom: 25px;
+    }
+    
+    .search-row {
+        display: grid;
+        grid-template-columns: 1fr 200px 150px;
+        gap: 15px;
+        align-items: center;
+    }
+    
+    .search-input {
+        padding: 12px 20px;
+        border: 2px solid #e0e0e0;
+        border-radius: 25px;
+        font-size: 16px;
+        transition: border-color 0.3s ease;
+    }
+    
+    .search-input:focus {
+        outline: none;
+        border-color: #4CAF50;
+    }
+    
+    .filter-select {
+        padding: 12px 15px;
+        border: 2px solid #e0e0e0;
+        border-radius: 10px;
+        font-size: 16px;
+        background: white;
+    }
+    
+    .wards-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+        gap: 25px;
+        margin-bottom: 30px;
+    }
+    
+    .ward-card {
+        background: white;
+        border-radius: 15px;
+        padding: 25px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        transition: all 0.3s ease;
+        border-top: 4px solid #4CAF50;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .ward-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+    }
+    
+    .ward-header {
+        display: flex;
+        justify-content: between;
+        align-items: flex-start;
+        margin-bottom: 20px;
+    }
+    
+    .ward-name {
+        font-size: 22px;
+        font-weight: bold;
+        color: #2c5530;
+        margin: 0 0 5px 0;
+    }
+    
+    .ward-department {
+        font-size: 14px;
+        color: #666;
+        background: #f0f8f0;
+        padding: 4px 12px;
+        border-radius: 20px;
+        display: inline-block;
+    }
+    
+    .occupancy-section {
+        margin: 20px 0;
+    }
+    
+    .occupancy-bar {
+        width: 100%;
+        height: 8px;
+        background: #e0e0e0;
+        border-radius: 4px;
+        overflow: hidden;
+        margin-bottom: 10px;
+    }
+    
+    .occupancy-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #4CAF50, #45a049);
+        transition: width 0.3s ease;
+        border-radius: 4px;
+    }
+    
+    .occupancy-text {
+        font-size: 14px;
+        color: #666;
+        display: flex;
+        justify-content: space-between;
+    }
+    
+    .ward-info {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 15px;
+        margin: 20px 0;
+    }
+    
+    .info-item {
+        text-align: center;
+        padding: 15px;
+        background: #f8f9fa;
+        border-radius: 10px;
+    }
+    
+    .info-number {
+        font-size: 24px;
+        font-weight: bold;
+        color: #4CAF50;
+    }
+    
+    .info-label {
+        font-size: 12px;
+        color: #666;
+        text-transform: uppercase;
+    }
+    
+    .ward-actions {
+        display: flex;
+        gap: 10px;
+        margin-top: 20px;
+    }
+    
+    .action-btn {
+        flex: 1;
+        padding: 10px;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: bold;
+        transition: all 0.3s ease;
+    }
+    
+    .edit-btn {
+        background: #2196F3;
+        color: white;
+    }
+    
+    .edit-btn:hover {
+        background: #1976D2;
+    }
+    
+    .delete-btn {
+        background: #f44336;
+        color: white;
+    }
+    
+    .delete-btn:hover {
+        background: #d32f2f;
+    }
+    
+    .status-badge {
+        position: absolute;
+        top: 15px;
+        right: 15px;
+        padding: 5px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: bold;
+        text-transform: uppercase;
+    }
+    
+    .status-active {
+        background: #e8f5e8;
+        color: #2e7d32;
+    }
+    
+    .status-inactive {
+        background: #ffebee;
+        color: #c62828;
+    }
+    
+    /* Your existing CSS styles */
+    .modal-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: rgba(0, 0, 0, 0.7);
+        z-index: 1000;
+        justify-content: center;
+        align-items: center;
+        backdrop-filter: blur(5px);
+        animation: fadeIn 0.3s ease-in-out;
+    }
+
+    .modal-overlay.show {
+        display: flex;
+    }
+
+    .modal-content-box {
+        background: white;
+        width: 90%;
+        max-width: 800px;
+        max-height: 90vh;
+        overflow-y: auto;
+        border-radius: 20px;
+        position: relative;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        transform: scale(0.7);
+        opacity: 0;
+        transition: all 0.3s ease;
+    }
+
+    .modal-overlay.show .modal-content-box {
+        transform: scale(1);
+        opacity: 1;
+    }
+
+    .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 25px 30px;
+        background-color: green;
+        color: white;
+        border-radius: 20px 20px 0 0;
+    }
+
+    .modal-header h2 {
+        margin: 0;
+        font-size: 24px;
+        font-weight: 600;
+    }
+
+    .close-btn {
+        font-size: 28px;
+        cursor: pointer;
+        color: white;
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        transition: all 0.3s ease;
+    }
+
+    .close-btn:hover {
+        background: rgba(255, 255, 255, 0.2);
+        transform: rotate(90deg);
+    }
+
+    .modal-body {
+        padding: 30px;
+    }
+
+    .form-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 20px;
+    }
+
+    .form-group {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .form-group label {
+        font-weight: 600;
+        color: #495057;
+        margin-bottom: 8px;
+        font-size: 14px;
+    }
+
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+        padding: 12px 16px;
+        border: 2px solid #e9ecef;
+        border-radius: 10px;
+        font-size: 14px;
+        transition: all 0.3s ease;
+        background: white;
+    }
+
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
+        outline: none;
+        border-color: #28a745;
+        box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.1);
+    }
+
+    .form-group input[type="file"] {
+        padding: 8px 12px;
+        border: 2px dashed #e9ecef;
+        background: #f8f9fa;
+    }
+
+    .modal-footer {
+        padding: 20px 30px;
+        display: flex;
+        justify-content: flex-end;
+        gap: 15px;
+        background: #f8f9fa;
+        border-radius: 0 0 20px 20px;
+    }
+
+    .submit-btn,
+    .cancel-btn {
+        padding: 12px 30px;
+        border: none;
+        border-radius: 25px;
+        cursor: pointer;
+        font-weight: 600;
+        font-size: 14px;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .submit-btn {
+        background-color: green;
+        color: white;
+        box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+    }
+
+    .submit-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(40, 167, 69, 0.4);
+    }
+
+    .cancel-btn {
+        background: black;
+        color: white;
+    }
+
+    .cancel-btn:hover {
+        background: #5a6268;
+        transform: translateY(-2px);
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+        }
+
+        to {
+            opacity: 1;
+        }
+    }
+
+    /* Responsive Design */
+    @media (max-width: 768px) {
+        .doctors-container {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .heading {
+            font-size: 28px;
+        }
+
+        #search {
+            width: 300px;
+        }
+
+        .form-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .modal-content-box {
+            width: 95%;
+            margin: 10px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block admin_content %}
+<div class="header-section">
+    <h1 class="page-title">Ward Management</h1>
+    <button class="add-btn" id="openModalBtn">
+        <i class="fas fa-plus"></i> Add New Ward
+    </button>
+</div>
+
+<div class="stats-container">
+    <div class="stat-card">
+        <div class="stat-number">{{ wards|length }}</div>
+        <div class="stat-label">Total Wards</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-number">{{ wards|selectattr("is_active")|list|length }}</div>
+        <div class="stat-label">Active Wards</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-number">{{ total_beds }}</div>
+        <div class="stat-label">Total Beds</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-number">{{ occupied_beds }}</div>
+        <div class="stat-label">Occupied Beds</div>
+    </div>
+</div>
+
+<div class="search-filter-section">
+    <div class="search-row">
+        <input type="text" class="search-input" placeholder="Search wards..." id="searchInput">
+        <select class="filter-select" id="departmentFilter">
+            <option value="">All Departments</option>
+            {% for department in departments %}
+            <option value="{{ department.id }}">{{ department.name }}</option>
+            {% endfor %}
+        </select>
+        <select class="filter-select" id="statusFilter">
+            <option value="">All Status</option>
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+        </select>
+    </div>
+</div>
+
+<div class="wards-grid" id="wardsGrid">
+    {% for ward in wards %}
+    <div class="ward-card">
+        <div class="status-badge {% if ward.is_active %}status-active{% else %}status-inactive{% endif %}">
+            {% if ward.is_active %}Active{% else %}Inactive{% endif %}
+        </div>
+        <div class="ward-header">
+            <div>
+                <h3 class="ward-name">{{ ward.name }}</h3>
+                <span class="ward-department" data-department-id="{{ ward.department.id }}">{{ ward.department.name }}</span>
+            </div>
+        </div>
+
+        <div class="occupancy-section">
+            <div class="occupancy-bar">
+                <div class="occupancy-fill" style="width: {{ (ward.current_occupancy/ward.capacity)*100 }}%;"></div>
+            </div>
+            <div class="occupancy-text">
+                <span>Occupancy</span>
+                <span><strong>{{ ward.current_occupancy }}/{{ ward.capacity }} beds</strong></span>
+            </div>
+        </div>
+
+        <div class="ward-info">
+            <div class="info-item">
+                <div class="info-number">{{ ward.capacity }}</div>
+                <div class="info-label">Total Beds</div>
+            </div>
+            <div class="info-item">
+                <div class="info-number">{{ ward.capacity - ward.current_occupancy }}</div>
+                <div class="info-label">Available</div>
+            </div>
+        </div>
+
+        <div class="ward-actions">
+            <button class="action-btn edit-btn" onclick="openEditModal('editModal{{ ward.id }}')">
+                <i class="fas fa-edit"></i> Edit
+            </button>
+            <button class="action-btn delete-btn" onclick="deleteWard({{ ward.id }})">
+                <i class="fas fa-trash"></i> Delete
+            </button>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Add/Edit Ward Modal -->
+<div id="addWardModal" class="modal-overlay">
+    <div class="modal-content-box">
+        <form id="wardForm" action="{{ url_for('admin_wards_create') }}" method="POST">
+            <div class="modal-header">
+                <h2><i class="fas fa-procedures"></i> Add New Ward</h2>
+                <span class="close-btn" id="closeModalBtn">&times;</span>
+            </div>
+
+            <div class="modal-body">
+                <div class="form-grid">
+                    <!-- Ward Name -->
+                    <div class="form-group">
+                        <label for="wardName">Ward Name *</label>
+                        <input type="text" id="wardName" name="wardName" required>
+                    </div>
+
+                    <!-- Department -->
+                    <div class="form-group">
+                        <label for="department">Department *</label>
+                        <select id="department" name="department" required>
+                            <option value="" selected disabled>Select Department</option>
+                            {% for department in departments %}
+                            <option value="{{ department.id }}">{{ department.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Total Capacity -->
+                    <div class="form-group">
+                        <label for="capacity">Total Capacity *</label>
+                        <input type="number" id="capacity" name="capacity" min="1" required>
+                    </div>
+
+                    <!-- Status -->
+                    <div class="form-group">
+                        <label for="isActive">Status</label>
+                        <select id="isActive" name="isActive">
+                            <option value="1">Active</option>
+                            <option value="0">Inactive</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" id="cancelBtn" class="cancel-btn">
+                    <i class="fas fa-times"></i> Cancel
+                </button>
+                <button type="submit" class="submit-btn">
+                    <i class="fas fa-plus"></i> Save Ward
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% for ward in wards %}
+<div id="editModal{{ ward.id }}" class="modal-overlay modal-edit">
+    <div class="modal-content-box">
+        <form action="{{ url_for('admin_wards_edit', ward_id=ward.id) }}" method="POST">
+            <div class="modal-header">
+                <h2><i class="fas fa-edit"></i> Edit Ward</h2>
+                <span class="close-btn" onclick="closeModal('editModal{{ ward.id }}')">&times;</span>
+            </div>
+
+            <div class="modal-body">
+                <div class="form-grid">
+                    <!-- Ward Name -->
+                    <div class="form-group">
+                        <label>Ward Name *</label>
+                        <input type="text" name="wardName" required value="{{ ward.name }}">
+                    </div>
+
+                    <!-- Department -->
+                    <div class="form-group">
+                        <label>Department *</label>
+                        <select name="department" required>
+                            {% for department in departments %}
+                            <option value="{{ department.id }}"
+                                {% if department.id == ward.department_id %}selected{% endif %}>
+                                {{ department.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Total Capacity -->
+                    <div class="form-group">
+                        <label>Total Capacity *</label>
+                        <input type="number" name="capacity" min="1" required value="{{ ward.capacity }}">
+                    </div>
+
+                    <!-- Status -->
+                    <div class="form-group">
+                        <label>Status</label>
+                        <select name="isActive">
+                            <option value="1" {% if ward.is_active %}selected{% endif %}>Active</option>
+                            <option value="0" {% if not ward.is_active %}selected{% endif %}>Inactive</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="cancel-btn" onclick="closeModal('editModal{{ ward.id }}')">
+                    <i class="fas fa-times"></i> Cancel
+                </button>
+                <button type="submit" class="submit-btn">
+                    <i class="fas fa-check"></i> Update Ward
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endfor %}
+{% endblock %}
+
+{% block admin_js %}
+<script>
+    // Modal functions for add/edit
+    const modal = document.getElementById('addWardModal');
+    const openBtn = document.getElementById('openModalBtn');
+    const closeBtn = document.getElementById('closeModalBtn');
+    const cancelBtn = document.getElementById('cancelBtn');
+    const form = document.getElementById('wardForm');
+
+    function openModal() {
+        modal.classList.add('show');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeModal(modalId) {
+        if (modalId) {
+            document.getElementById(modalId).classList.remove('show');
+        } else {
+            modal.classList.remove('show');
+        }
+        document.body.style.overflow = 'auto';
+        form.reset();
+    }
+
+    function openEditModal(modalId) {
+        const modalEdit = document.getElementById(modalId);
+        if (modalEdit) {
+            modalEdit.classList.add('show');
+            document.body.style.overflow = 'hidden';
+        }
+    }
+
+    function deleteWard(wardId) {
+        if (confirm('Are you sure you want to delete this ward?')) {
+
+        }
+    }
+
+    // Event listeners
+    openBtn.addEventListener('click', openModal);
+    closeBtn.addEventListener('click', () => closeModal());
+    cancelBtn.addEventListener('click', () => closeModal());
+
+    // Close modal when clicking outside
+    modal.addEventListener('click', function(e) {
+        if (e.target === modal) {
+            closeModal();
+        }
+    });
+
+    // Close with Escape key
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            if (modal.classList.contains('show')) {
+                closeModal();
+            }
+            // Also check for edit modals
+            document.querySelectorAll('.modal-edit.show').forEach(modal => {
+                closeModal(modal.id);
+            });
+        }
+    });
+
+    // Form validation
+    form.addEventListener('submit', function(e) {
+        const requiredFields = form.querySelectorAll('input[required], select[required]');
+        let isValid = true;
+
+        requiredFields.forEach(field => {
+            if (!field.value.trim()) {
+                field.style.borderColor = '#dc3545';
+                isValid = false;
+            } else {
+                field.style.borderColor = '#28a745';
+            }
+        });
+
+        if (!isValid) {
+            e.preventDefault();
+        }
+    });
+
+    // Field validation on blur
+    const inputs = form.querySelectorAll('input, select');
+    inputs.forEach(input => {
+        input.addEventListener('blur', function() {
+            if (this.hasAttribute('required') && !this.value.trim()) {
+                this.style.borderColor = '#dc3545';
+            } else if (this.value.trim()) {
+                this.style.borderColor = '#28a745';
+            } else {
+                this.style.borderColor = '#e9ecef';
+            }
+        });
+
+        input.addEventListener('input', function() {
+            if (this.style.borderColor === 'rgb(220, 53, 69)' && this.value.trim()) {
+                this.style.borderColor = '#28a745';
+            }
+        });
+    });
+
+    // Search and filter functionality
+    document.getElementById('searchInput').addEventListener('input', filterWards);
+    document.getElementById('departmentFilter').addEventListener('change', filterWards);
+    document.getElementById('statusFilter').addEventListener('change', filterWards);
+
+    function filterWards() {
+        const searchInput = document.getElementById('searchInput').value.toLowerCase();
+        const departmentFilter = document.getElementById('departmentFilter').value.toLowerCase();
+        const statusFilter = document.getElementById('statusFilter').value.toLowerCase();
+        const wardCards = document.querySelectorAll('.ward-card');
+
+        wardCards.forEach(card => {
+            const wardName = card.querySelector('.ward-name').textContent.toLowerCase();
+            const wardDepartment = card.querySelector('.ward-department').textContent.trim().toLowerCase();
+            const wardStatus = card.querySelector('.status-badge').textContent.trim().toLowerCase();
+            const departmentId = card.querySelector('.ward-department').getAttribute('data-department-id');
+
+            const matchesSearch = wardName.includes(searchInput);
+            const matchesDepartment = departmentFilter === '' || departmentId === departmentFilter;
+            const matchesStatus = statusFilter === '' || wardStatus === statusFilter;
+
+            if (matchesSearch && matchesDepartment && matchesStatus) {
+                card.style.display = 'block';
+            } else {
+                card.style.display = 'none';
+            }
+        });
+    }
+</script>
+{% endblock %}

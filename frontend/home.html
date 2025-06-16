@@ -1,0 +1,420 @@
+{% extends 'base.html' %}
+{% block title %}MediLink{% endblock %}
+{% block css %}
+<style>
+    .green {
+        color: green;
+    }
+
+    .welcome {
+        font-size: 50px;
+        text-align: center;
+        animation: fadein 1s;
+    }
+
+    .welcome::selection {
+        background-color: black;
+        color: white;
+    }
+
+    .green::selection {
+        background-color: green;
+    }
+
+    .main {
+        height: 80vh;
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+    }
+
+    .buttons {
+        display: flex;
+        justify-self: center;
+        align-items: center;
+    }
+
+    .buttons a {
+        padding: 10px 20px;
+        border-radius: 30px;
+        margin: 10px 5px;
+        text-decoration: none;
+        transition: .4s all;
+        animation: fadein2 1s;
+    }
+
+    .login {
+        color: white;
+        background-color: black;
+    }
+
+    .register {
+        color: white;
+        background-color: green;
+    }
+
+    .buttons a:hover {
+        transform: scale(1.1);
+        box-shadow: 0 0 10px 1px rgba(0, 0, 0, 0.4);
+    }
+
+    @keyframes fadein {
+        0% {
+            transform: translateY(-20px);
+            opacity: 0;
+        }
+
+        100% {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    }
+
+    @keyframes fadein2 {
+        0% {
+            transform: scale(0.5);
+            opacity: 0;
+        }
+
+        100% {
+            transform: scale(1);
+            opacity: 1;
+        }
+    }
+
+    /* Features Section */
+    .features {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        border-radius: 20px;
+        padding: 3rem 2rem;
+        margin: 2rem 0;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        width: 90%;
+
+    }
+
+    .features h2 {
+        text-align: center;
+        margin-bottom: 2rem;
+        color: #333;
+        font-size: 2rem;
+    }
+
+    .features-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 2rem;
+    }
+
+    .feature-card {
+        text-align: center;
+        padding: 1.5rem;
+        border-radius: 15px;
+        background: white;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        transition: transform 0.3s;
+        cursor: pointer;
+    }
+
+    .feature-card:hover {
+        transform: translateY(-5px);
+    }
+
+    .feature-icon {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+        color: #28a745;
+    }
+
+    .feature-card h3 {
+        margin-bottom: 0.5rem;
+        color: #333;
+    }
+
+    .feature-card p {
+        color: #666;
+        font-size: 0.9rem;
+    }
+
+    /* How it Works */
+    .how-it-works {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        border-radius: 20px;
+        padding: 3rem 2rem;
+        margin: 2rem 0;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        width: 90%;
+    }
+
+    .steps {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 2rem;
+        margin-top: 2rem;
+    }
+
+    .step {
+        text-align: center;
+        position: relative;
+    }
+
+    .step-number {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        background: #28a745;
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 1rem;
+        font-weight: bold;
+        font-size: 1.2rem;
+    }
+
+    .trust-section {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        border-radius: 20px;
+        padding: 2rem;
+        margin: 2rem 0;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        width: 90%;
+        text-align: center;
+    }
+
+    .trust-badges {
+        display: flex;
+        justify-content: center;
+        gap: 2rem;
+        flex-wrap: wrap;
+        margin: 1rem 0;
+    }
+
+    .badge {
+        background: white;
+        padding: 1rem;
+        border-radius: 10px;
+        box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+        font-weight: bold;
+        color: #28a745;
+    }
+
+    .footer {
+        background: rgba(0, 0, 0, 0.9);
+        color: white;
+        padding: 3rem 2rem 1rem;
+        margin-top: 4rem;
+    }
+
+    .footer-content {
+        max-width: 1200px;
+        margin: 0 auto;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 2rem;
+    }
+
+    .footer-section h3 {
+        margin-bottom: 1rem;
+        color: #28a745;
+    }
+
+    .footer-section{
+        display: flex;
+        flex-direction: column;
+    }
+
+    .footer-section a {
+        color: #ccc;
+        text-decoration: none;
+        display: inline-block;
+        margin-bottom: 0.5rem;
+        transition: color 0.3s;
+    }
+
+    .footer-section a:hover {
+        color: #28a745;
+    }
+
+    .social-icons {
+        display: flex;
+        gap: 1rem;
+        margin-top: 1rem;
+    }
+
+    .social-icons a {
+        display: inline-flex;
+        justify-content: center;
+        align-items: center;
+        width: 40px;
+        height: 40px;
+        background: #28a745;
+        border-radius: 50%;
+        color: black;
+        transition: all 0.3s;
+        font-size: 18px;
+        text-decoration: none;
+    }
+
+    .social-icons a:hover{
+        transform: scale(1.1);
+        box-shadow: 0 0 8px gray;
+        color: black;
+    }
+
+    .footer-bottom {
+        text-align: center;
+        margin-top: 2rem;
+        margin-bottom: 20px;
+        padding-top: 2rem;
+        border-top: 1px solid #333;
+        color: #ccc;
+    }
+    main{
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+    }
+</style>
+{% endblock %}
+{% block content %}
+<div class="main">
+    <h1 class="welcome">Welcome to <span class="green">MediLink</span></h1>
+    <div class="buttons">
+        <a href="/login" class="login">Login</a>
+        <a href="/register" class="register">Register</a>
+    </div>
+</div>
+
+<main>
+<section class="features" id="services">
+    <h2>Our Key Features</h2>
+    <div class="features-grid">
+        <div class="feature-card">
+            <div class="feature-icon">
+                <i class="fas fa-calendar-check" aria-hidden="true"></i>
+            </div>
+            <h3>Easy Appointments</h3>
+            <p>Book appointments with healthcare providers instantly. No more waiting on hold.</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">
+                <i class="fas fa-file-medical" aria-hidden="true"></i>
+            </div>
+            <h3>Digital Records</h3>
+            <p>Access your complete medical history and test results anytime.</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">
+                <i class="fas fa-pills" aria-hidden="true"></i>
+            </div>
+            <h3>Prescription Management</h3>
+            <p>Manage prescriptions and set medication reminders easily.</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">
+                <i class="fas fa-heart" aria-hidden="true"></i>
+            </div>
+            <h3>Health Monitoring</h3>
+            <p>Track vital signs and health metrics with integrated devices.</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">
+                <i class="fas fa-shield-alt" aria-hidden="true"></i>
+            </div>
+            <h3>Secure & Private</h3>
+            <p>Your health data is protected with enterprise-grade security.</p>
+        </div>
+    </div>
+</section>
+<section class="how-it-works">
+    <h2>How MediLink Works</h2>
+    <div class="steps">
+        <div class="step">
+            <div class="step-number">1</div>
+            <h3>Sign Up</h3>
+            <p>Create your secure account in minutes</p>
+        </div>
+        <div class="step">
+            <div class="step-number">2</div>
+            <h3>Find Care</h3>
+            <p>Search and connect with healthcare providers</p>
+        </div>
+        <div class="step">
+            <div class="step-number">3</div>
+            <h3>Get Treatment</h3>
+            <p>Receive care through appointments</p>
+        </div>
+        <div class="step">
+            <div class="step-number">4</div>
+            <h3>Manage Health</h3>
+            <p>Track your health journey and access records</p>
+        </div>
+    </div>
+</section>
+<section class="trust-section">
+    <h2>Trusted Healthcare Platform</h2>
+    <p><strong>Join over 50,000+ patients</strong> who trust MediLink for their healthcare needs</p>
+    <div class="trust-badges">
+        <div class="badge">
+            <i class="fas fa-shield" aria-hidden="true"></i> HIPAA Compliant
+        </div>
+        <div class="badge">
+            <i class="fas fa-lock" aria-hidden="true"></i> SSL Encrypted
+        </div>
+        <div class="badge">
+            <i class="fas fa-certificate" aria-hidden="true"></i> FDA Approved
+        </div>
+        <div class="badge">
+            <i class="fas fa-award" aria-hidden="true"></i> ISO 27001
+        </div>
+    </div>
+    <p><em>"Your privacy and security are our top priorities. All data is encrypted and stored securely."</em></p>
+</section>
+</main>
+<footer class="footer" id="contact">
+    <div class="footer-content">
+        <div class="footer-section">
+            <h3>Services</h3>
+            <a href="/telemedicine">Telemedicine</a>
+            <a href="/appointments">Appointments</a>
+            <a href="/prescriptions">Prescriptions</a>
+            <a href="/health-records">Health Records</a>
+        </div>
+        <div class="footer-section">
+            <h3>Support</h3>
+            <a href="/help">Help Center</a>
+            <a href="/contact">Contact Us</a>
+            <a href="/faq">FAQ</a>
+            <a href="/live-chat">Live Chat</a>
+        </div>
+        <div class="footer-section">
+            <h3>Company</h3>
+            <a href="/about">About Us</a>
+            <a href="/careers">Careers</a>
+            <a href="/privacy">Privacy Policy</a>
+            <a href="/terms">Terms of Service</a>
+        </div>
+        <div class="footer-section">
+            <h3>Connect</h3>
+            <p>support@medilink.com</p>
+            <p>1-800-MEDILINK</p>
+            <div class="social-icons">
+                <a href="#"><i class="fab fa-facebook-f"></i></a>
+                <a href="#"><i class="fab fa-twitter"></i></a>
+                <a href="#"><i class="fab fa-linkedin-in"></i></a>
+                <a href="#"><i class="fab fa-instagram"></i></a>
+            </div>
+        </div>
+    </div>
+    <div class="footer-bottom">
+        <p>&copy; 2025 MediLink. All rights reserved. | Making healthcare accessible for everyone.</p>
+    </div>
+</footer>
+{% endblock %}

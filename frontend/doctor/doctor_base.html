@@ -1,0 +1,138 @@
+{% extends 'base.html' %}
+{% block title %}Doctor Dashboard{% endblock %}
+{% block css %}
+<style>
+    .sidebar {
+        background-color: green;
+        border-radius: 0 20px 20px 0;
+        width: 250px;
+        position: fixed;
+        left: 0;
+        top: 0;
+        height: 100vh;
+    }
+    .sidebar ul {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+    .sidebar a {
+        text-decoration: none;
+        color: white;
+        font-size: 20px;
+        display: block;
+        padding: 5px 20px;
+        border-radius: 20px;
+    }
+    .sidebar li {
+        margin: 20px;
+        transition: .3s all;
+        border-radius: 20px;
+    }
+    .sidebar li:hover {
+        background-color: rgb(0, 181, 0);
+    }
+    .last {
+        position: absolute;
+        bottom: 50px;
+        width: 100%;
+        display: flex;
+        align-items: center;
+    }
+    .last p {
+        font-size: 20px;
+        color: white;
+        cursor: pointer;
+        margin: 0;
+    }
+    .last i {
+        font-size: 30px;
+        color: white;
+        margin: 0 10px 0 40px;
+        cursor: pointer;
+        transition: .3s all;
+    }
+    .last i:hover{
+        transform: scale(1.1);
+    }
+    .logout{
+        position: relative;
+        right: 30px;
+        display: inline-block;
+        top: 2px;
+    }
+    .main-box {
+        margin: 20px 20px 20px 270px;
+        height: 94vh;
+        box-shadow: 0 0 10px 1px gray;
+        border-radius: 20px;
+        padding: 10px 15px;
+        overflow-y: auto;
+    }
+    .hosp{
+        font-size: 35px;
+        font-weight: bold;
+        color:white;
+        text-align: center;
+        padding: 5px;
+        margin-top: 20px;
+    }
+    .link{
+        background-color: white;
+        color: green;
+        border-radius: 0 10px 10px 0;
+    }
+    .main-box::-webkit-scrollbar {
+        width: 10px;
+    }
+
+    .main-box::-webkit-scrollbar-track {
+        background: #e0f2e0;
+        border-radius: 10px;
+    }
+
+    .main-box::-webkit-scrollbar-thumb {
+        background-color: green;
+        border-radius: 10px;
+        border: 2px solid #e0f2e0;
+    }
+
+    .main-box::-webkit-scrollbar-thumb:hover {
+        background-color: #0b7d0b;
+    }
+</style>
+{% block doctor_css %}
+
+{% endblock %}
+{% endblock %}
+{% block content %}
+<div class="sidebar">
+    <p class="hosp">Medi<span class="link">Link</span></p>
+    <nav>
+        <ul>
+            <li><a href="/doctors">Home</a></li>
+            <li><a href="/doctors/appointments">Appointments</a></li>
+            <li><a href="/doctors/prescriptions">Prescriptions</a></li>
+            <li><a href="/doctors/diagnosis">Diagnosis</a></li>
+            <li><a href="/doctors/medicines">Diagnosis</a></li>
+        </ul>
+    </nav>
+    <div class="last">
+        <i class="fa-solid fa-circle-user"></i>
+        <p>{{ doctor.user.first_name }}</p>
+        <a href="/logout" onclick="return confirm('Are you sure you want to logout?');">
+            <i class="fa-solid logout fa-right-from-bracket"></i>
+        </a>
+    </div>
+</div>
+<div class="main-box">
+    {% block admin_content %}{% endblock %}
+</div>
+{% block doctor_js %}
+<script>
+function confirmLogout() {
+  return confirm("Are you sure you want to logout?");
+}
+</script>
+{% endblock %}
+{% endblock %}

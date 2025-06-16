@@ -1,0 +1,538 @@
+{% extends 'admin/admin_base.html' %}
+{% block admin_css %}
+<style>
+    .nurses-container {
+        width: 100%;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+    }
+
+    .heading {
+        font-size: 40px;
+        font-weight: bold;
+        color: green;
+        margin: 0;
+    }
+
+    .search-box {
+        background-color: gainsboro;
+        padding: 10px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        border-radius: 30px;
+    }
+
+    .search-box i {
+        font-size: 20px;
+        margin-left: 15px;
+        margin-right: 10px;
+        cursor: pointer;
+    }
+
+    #search {
+        font-size: 17px;
+        background-color: transparent;
+        border: none;
+        margin-right: 5px;
+        width: 500px;
+    }
+
+    #search:focus {
+        outline: none;
+    }
+
+    .add-btn {
+        padding: 8px 16px;
+        text-decoration: none;
+        background-color: green;
+        color: white;
+        border-radius: 8px;
+        font-weight: 500;
+        transition: transform 0.3s, box-shadow 0.3s;
+        border: none;
+        cursor: pointer;
+    }
+
+    .add-btn:hover {
+        transform: scale(1.05);
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    }
+
+    .nurses-table {
+        max-height: 75vh;
+        overflow-y: auto;
+        border: 1px solid #ccc;
+        border-radius: 10px;
+    }
+
+    .nurses-table table {
+        width: 100%;
+        border-collapse: collapse;
+        font-family: Arial, sans-serif;
+    }
+
+    .nurses-table th,
+    .nurses-table td {
+        padding: 12px 15px;
+        text-align: center;
+        border-bottom: 1px solid #ddd;
+    }
+
+    .nurses-table th {
+        background-color: green;
+        color: white;
+        font-size: 16px;
+        position: sticky;
+        top: 0;
+        z-index: 1;
+    }
+
+    .nurses-table td {
+        background-color: #fff;
+    }
+
+    .nurses-table::-webkit-scrollbar {
+        width: 10px;
+    }
+
+    .nurses-table::-webkit-scrollbar-track {
+        background: #e0f2e0;
+        border-radius: 10px;
+    }
+
+    .nurses-table::-webkit-scrollbar-thumb {
+        background-color: green;
+        border-radius: 10px;
+        border: 2px solid #e0f2e0;
+    }
+
+    .nurses-table::-webkit-scrollbar-thumb:hover {
+        background-color: #0b7d0b;
+    }
+
+    /* Modal Styles */
+    .modal-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: rgba(0, 0, 0, 0.7);
+        z-index: 1000;
+        justify-content: center;
+        align-items: center;
+        backdrop-filter: blur(5px);
+        animation: fadeIn 0.3s ease-in-out;
+    }
+
+    .modal-overlay.show {
+        display: flex;
+    }
+
+    .modal-content-box {
+        background: white;
+        width: 90%;
+        max-width: 800px;
+        max-height: 90vh;
+        overflow-y: auto;
+        border-radius: 20px;
+        position: relative;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        transform: scale(0.7);
+        opacity: 0;
+        transition: all 0.3s ease;
+    }
+
+    .modal-overlay.show .modal-content-box {
+        transform: scale(1);
+        opacity: 1;
+    }
+
+    .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 25px 30px;
+        background-color: green;
+        color: white;
+        border-radius: 20px 20px 0 0;
+    }
+
+    .modal-header h2 {
+        margin: 0;
+        font-size: 24px;
+        font-weight: 600;
+    }
+
+    .close-btn {
+        font-size: 28px;
+        cursor: pointer;
+        color: white;
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        transition: all 0.3s ease;
+    }
+
+    .close-btn:hover {
+        background: rgba(255, 255, 255, 0.2);
+        transform: rotate(90deg);
+    }
+
+    .modal-body {
+        padding: 30px;
+    }
+
+    .form-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 20px;
+    }
+
+    .form-group {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .form-group label {
+        font-weight: 600;
+        color: #495057;
+        margin-bottom: 8px;
+        font-size: 14px;
+    }
+
+    .form-group input,
+    .form-group select {
+        padding: 12px 16px;
+        border: 2px solid #e9ecef;
+        border-radius: 10px;
+        font-size: 14px;
+        transition: all 0.3s ease;
+        background: white;
+    }
+
+    .form-group input:focus,
+    .form-group select:focus {
+        outline: none;
+        border-color: #28a745;
+        box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.1);
+    }
+
+    .form-group input[type="file"] {
+        padding: 8px 12px;
+        border: 2px dashed #e9ecef;
+        background: #f8f9fa;
+    }
+
+    .modal-footer {
+        padding: 20px 30px;
+        display: flex;
+        justify-content: flex-end;
+        gap: 15px;
+        background: #f8f9fa;
+        border-radius: 0 0 20px 20px;
+    }
+
+    .submit-btn,
+    .cancel-btn {
+        padding: 12px 30px;
+        border: none;
+        border-radius: 25px;
+        cursor: pointer;
+        font-weight: 600;
+        font-size: 14px;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .submit-btn {
+        background-color: green;
+        color: white;
+        box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+    }
+
+    .submit-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(40, 167, 69, 0.4);
+    }
+
+    .cancel-btn {
+        background: black;
+        color: white;
+    }
+
+    .cancel-btn:hover {
+        background: #5a6268;
+        transform: translateY(-2px);
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+        }
+
+        to {
+            opacity: 1;
+        }
+    }
+
+    /* Responsive Design */
+    @media (max-width: 768px) {
+        .nurses-container {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .heading {
+            font-size: 28px;
+        }
+
+        #search {
+            width: 300px;
+        }
+
+        .form-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .modal-content-box {
+            width: 95%;
+            margin: 10px;
+        }
+    }
+</style>
+{% endblock %}
+{% block admin_content %}
+<div class="nurses-container">
+    <p class="heading">Nurses</p>
+    <div class="search-box">
+        <i class="fas fa-search"></i>
+        <input type="text" name="search" id="search" placeholder="Enter the Name or License No or Shift">
+    </div>
+    <button id="openModalBtn" class="add-btn">+ Add New Nurse</a>
+</div>
+<div class="nurses-table">
+    <table>
+        <tr>
+            <th>ID</th>
+            <th>Photo</th>
+            <th>Full Name</th>
+            <th>License Number</th>
+            <th>Shift</th>
+            <th>Actions</th>
+        </tr>
+    </table>
+</div>
+
+
+<div id="addDoctorModal" class="modal-overlay">
+    <div class="modal-content-box">
+        <form id="nurseForm" action="/add_nurse" method="post">
+            <div class="modal-header">
+                <h2><i class="fas fa-user-md"></i> Add New Nurse</h2>
+                <span class="close-btn" id="closeModalBtn">&times;</span>
+            </div>
+
+            <div class="modal-body">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="first_name">First Name *</label>
+                        <input type="text" id="first_name" name="first_name" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="last_name">Last Name *</label>
+                        <input type="text" id="last_name" name="last_name" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="email">Email Address *</label>
+                        <input type="email" id="email" name="email" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="phone">Phone Number</label>
+                        <input type="tel" id="phone" name="phone">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="photo">Profile Photo</label>
+                        <input type="file" id="photo" name="photo" accept="image/*">
+                    </div>
+
+                    <!-- Account Information -->
+                    <div class="form-group">
+                        <label for="username">Username *</label>
+                        <input type="text" id="username" name="username" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="password">Password *</label>
+                        <input type="password" id="password" name="password" required>
+                    </div>
+
+                    <!-- Professional Information -->
+                    <div class="form-group">
+                        <label for="license_number">License Number *</label>
+                        <input type="text" id="license_number" name="license_number" required>
+                    </div>
+
+
+                    <div class="form-group">
+                        <label for="department_id">Department *</label>
+                        <select id="department_id" name="department_id" required>
+                            <option value="" disabled selected>Select Department</option>
+                            <option value="1">Cardiology</option>
+                            <option value="2">Orthopedics</option>
+                            <option value="3">Dermatology</option>
+                            <option value="4">Neurology</option>
+                            <option value="5">Pediatrics</option>
+                            <option value="6">Gastroenterology</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="ward_id">Ward *</label>
+                        <select id="ward_id" name="ward_id" required>
+                            <option value="" disabled selected>Select Ward</option>
+                            <option value="1">Cardiology</option>
+                            <option value="2">Orthopedics</option>
+                            <option value="3">Dermatology</option>
+                            <option value="4">Neurology</option>
+                            <option value="5">Pediatrics</option>
+                            <option value="6">Gastroenterology</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="shift">Shift *</label>
+                        <select name="shift" id="shift" required>
+                            <option value="" disabled selected>Select Shift</option>
+                            <option value="1">Morning</option>
+                            <option value="2">Evening</option>
+                            <option value="3">Night</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" id="cancelBtn" class="cancel-btn">
+                    <i class="fas fa-times"></i>
+                    Cancel
+                </button>
+                <button type="submit" class="submit-btn">
+                    <i class="fas fa-plus"></i>
+                    Add Doctor
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% endblock %}
+{% block admin_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const searchInput = document.getElementById('search');
+        const tableRows = document.querySelectorAll('.nurses-table table tr');
+
+        searchInput.addEventListener('keyup', function () {
+            const filter = searchInput.value.toLowerCase();
+
+            tableRows.forEach((row, index) => {
+                if (index === 0) return;
+
+                const cells = row.querySelectorAll('td');
+                let matchFound = false;
+
+                cells.forEach(cell => {
+                    if (cell.textContent.toLowerCase().includes(filter)) {
+                        matchFound = true;
+                    }
+                });
+
+                row.style.display = matchFound ? '' : 'none';
+            });
+        });
+    });
+    document.addEventListener("DOMContentLoaded", () => {
+        const modal = document.getElementById('addDoctorModal');
+        const openBtn = document.getElementById('openModalBtn');
+        const closeBtn = document.getElementById('closeModalBtn');
+        const cancelBtn = document.getElementById('cancelBtn');
+        const form = document.getElementById('nurseForm');
+
+        function openModal() {
+            modal.classList.add('show');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeModal() {
+            modal.classList.remove('show');
+            document.body.style.overflow = 'auto';
+            form.reset();
+        }
+
+        openBtn.addEventListener('click', openModal);
+        closeBtn.addEventListener('click', closeModal);
+        cancelBtn.addEventListener('click', closeModal);
+
+        modal.addEventListener('click', function (e) {
+            if (e.target === modal) {
+                closeModal();
+            }
+        });
+
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape' && modal.classList.contains('show')) {
+                closeModal();
+            }
+        });
+
+        form.addEventListener('submit', function (e) {
+            e.preventDefault();
+
+            const requiredFields = form.querySelectorAll('input[required], select[required]');
+            let isValid = true;
+
+            requiredFields.forEach(field => {
+                if (!field.value.trim()) {
+                    field.style.borderColor = '#dc3545';
+                    isValid = false;
+                } else {
+                    field.style.borderColor = '#28a745';
+                }
+            });
+        });
+
+        const inputs = form.querySelectorAll('input, select');
+        inputs.forEach(input => {
+            input.addEventListener('blur', function () {
+                if (this.hasAttribute('required') && !this.value.trim()) {
+                    this.style.borderColor = '#dc3545';
+                } else if (this.value.trim()) {
+                    this.style.borderColor = '#28a745';
+                } else {
+                    this.style.borderColor = '#e9ecef';
+                }
+            });
+
+            input.addEventListener('input', function () {
+                if (this.style.borderColor === 'rgb(220, 53, 69)' && this.value.trim()) {
+                    this.style.borderColor = '#28a745';
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}

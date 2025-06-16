@@ -1,0 +1,268 @@
+{% extends 'admin/admin_base.html' %}
+{% block admin_css %}
+<style>
+    .stats-cards{
+        width: 100%;
+        margin-top: 20px;
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+    .stats-card{
+        width: 250px;
+        background: linear-gradient(to right,rgb(149, 149, 149), lightgray);
+        margin: 10px 25px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        border-radius: 10px;
+        box-shadow: 0 0 10px 1px rgba(0,0,0,0.2);
+    }
+    .stats-card i{
+        font-size: 30px;
+        color: white;
+        background-color: green;
+        padding: 20px;
+        border-radius: 10px 0 0 10px;
+    }
+
+    .stats{
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+        width: 100%;
+    }
+    .num{
+        font-size: 25px;
+        color: green;
+    }
+    .stats p{
+        font-weight: bolder;
+    }
+    .calendar {
+        width: 100%;
+        max-width: 400px;
+        background: white;
+        padding: 20px;
+        border-radius: 15px;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    }
+    .calendar header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .calendar header h2 {
+      margin: 0;
+    }
+
+    .calendar header button {
+      background: green;
+      color: white;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    .days {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    .day {
+      text-align: center;
+      padding: 10px;
+      border-radius: 8px;
+      background: #e9e9e9;
+    }
+
+    .day.today {
+      background: green;
+      color: white;
+      font-weight: bold;
+    }
+
+    .weekdays {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      margin-top: 10px;
+      font-weight: bold;
+      text-align: center;
+    }
+
+    .cal-recent {
+        width: 100%;
+        display: flex;
+        align-items: flex-start;
+        justify-content: flex-start;
+        padding: 30px;
+        gap: 30px;
+        box-sizing: border-box;
+    }
+
+    .recent-activities {
+        flex-grow: 1;
+        background: white;
+        padding: 20px;
+        border-radius: 15px;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        height: 390px;
+        overflow-y: auto;
+    }
+
+    .recent-activities h3 {
+        margin-top: 0;
+        color: green;
+        font-size: 20px;
+        font-weight: bold;
+    }
+
+    .recent-activities ul {
+        list-style: none;
+        padding-left: 0;
+        margin-top: 10px;
+    }
+
+    .recent-activities li {
+        margin-bottom: 10px;
+        font-size: 16px;
+        color: #333;
+        padding-left: 15px;
+        position: relative;
+    }
+
+    .recent-activities li::before {
+        content: "•";
+        position: absolute;
+        left: 0;
+        color: green;
+        font-size: 20px;
+        line-height: 1;
+    }
+</style>
+{% endblock %}
+{% block admin_content %}
+<div class="stats-cards">
+    <div class="stats-card">
+        <i class="fa-solid fa-user-doctor"></i>
+        <div class="stats">
+            <p>Total Doctors</p>
+            <p class="num total-doctors">0</p>
+        </div>
+    </div>
+    <div class="stats-card">
+        <i class="fa-solid fa-user-nurse"></i>
+        <div class="stats">
+            <p>Total Nurses</p>
+            <p class="num total-nurses">0</p>
+        </div>
+    </div>
+    <div class="stats-card">
+        <i class="fa-solid fa-hospital"></i>
+        <div class="stats">
+            <p>Total Deparments</p>
+            <p class="num total-deparments">0</p>
+        </div>
+    </div>
+    <div class="stats-card">
+        <i class="fa-solid fa-house-user"></i>
+        <div class="stats">
+            <p>Total Wards</p>
+            <p class="num total-wards">0</p>
+        </div>
+    </div>
+    <div class="stats-card">
+        <i class="fa-solid fa-prescription-bottle-medical"></i>
+        <div class="stats">
+            <p>Total Pharmacists</p>
+            <p class="num total-pharmacists">0</p>
+        </div>
+    </div>
+    <div class="stats-card">
+        <i class="fa-solid fa-bed"></i>
+        <div class="stats">
+            <p>Total Patients</p>
+            <p class="num total-patients">0</p>
+        </div>
+    </div>
+</div>
+<div class="cal-recent">
+    <div class="calendar">
+        <header>
+            <button onclick="changeMonth(-1)">&#8592;</button>
+            <h2 id="monthYear"></h2>
+            <button onclick="changeMonth(1)">&#8594;</button>
+        </header>
+
+        <div class="weekdays">
+            <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div>
+            <div>Thu</div><div>Fri</div><div>Sat</div>
+        </div>
+
+        <div class="days" id="days"></div>
+    </div>
+    <div class="recent-activities">
+        <h3>Recent Activities</h3>
+        <ul>
+            <li>Dr. Smith added to Cardiology - 5 min ago</li>
+            <li>Patient John admitted to Ward 2 - 30 min ago</li>
+            <li>15 new medicines added to Pharmacy - 1 hour ago</li>
+            <li>Dr. Smith added to Cardiology - 5 min ago</li>
+            <li>Patient John admitted to Ward 2 - 30 min ago</li>
+            <li>15 new medicines added to Pharmacy - 1 hour ago</li>
+            <li>Dr. Smith added to Cardiology - 5 min ago</li>
+            <li>Patient John admitted to Ward 2 - 30 min ago</li>
+            <li>15 new medicines added to Pharmacy - 1 hour ago</li>
+            <li>Dr. Smith added to Cardiology - 5 min ago</li>
+            <li>Patient John admitted to Ward 2 - 30 min ago</li>
+            <li>15 new medicines added to Pharmacy - 1 hour ago</li>
+        </ul>
+    </div>
+</div>
+{% endblock %}
+{% block admin_js %}
+<script>
+    const daysContainer = document.getElementById('days');
+    const monthYear = document.getElementById('monthYear');
+
+    let date = new Date();
+
+    function renderCalendar() {
+      const year = date.getFullYear();
+      const month = date.getMonth();
+
+      const firstDay = new Date(year, month, 1).getDay();
+      const lastDate = new Date(year, month + 1, 0).getDate();
+
+      monthYear.textContent = `${date.toLocaleString('default', { month: 'long' })} ${year}`;
+
+      daysContainer.innerHTML = '';
+
+      for (let i = 0; i < firstDay; i++) {
+        daysContainer.innerHTML += `<div></div>`;
+      }
+
+      for (let i = 1; i <= lastDate; i++) {
+        const isToday =
+          i === new Date().getDate() &&
+          month === new Date().getMonth() &&
+          year === new Date().getFullYear();
+
+        daysContainer.innerHTML += `<div class="day ${isToday ? 'today' : ''}">${i}</div>`;
+      }
+    }
+
+    function changeMonth(delta) {
+      date.setMonth(date.getMonth() + delta);
+      renderCalendar();
+    }
+
+    renderCalendar();
+</script>
+{% endblock %}

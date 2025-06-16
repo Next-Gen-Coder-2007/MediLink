@@ -1,0 +1,111 @@
+{% extends 'base.html' %}
+{% block title %}Login - MediLink{% endblock%}
+{% block css %}
+<style>
+    .main-container{
+        height: 100vh;
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    form{
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        padding: 20px;
+        border-radius: 20px;
+        max-width: 400px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+        position: relative;
+    }
+    .title{
+        font-size: 50px;
+        font-weight: 700;
+        margin: 20px;
+    }
+    .link{
+        color:green;
+    }
+    .username, .password{
+        display: flex;
+        flex-direction:column
+    }
+    .username *, .password *{
+        margin-bottom: 5px;
+    }
+    #username, #password{
+        padding: 5px 10px;
+        font-size: 15px;
+        min-width: 300px;
+        border: dotted 1px gray;
+        border-radius: 10px;
+        transition: border-color 0.3s;
+        outline: none;
+        margin-bottom: 15px;
+    }
+    #username:focus, #password:focus{
+        border-color: green;
+        border-style: solid;
+    }
+    .login-btn{
+        cursor: pointer;
+        margin: 10px 0;
+        padding: 10px 20px;
+        border-radius: 30px;
+        border: none;
+        font-size:15px;
+        color: white;
+        background-color: green;
+        transition: .3s all;
+    }
+    .login-btn:hover{
+        transform: scale(1.1);
+        box-shadow: 0 0 5px 2px rgba(0,0,0,0.4);
+    }
+    i{
+        position: absolute;
+        bottom: 103px;
+        right: 30px;
+        cursor: pointer;
+    }
+</style>
+{% endblock%}
+{% block content %}
+<div class="main-container">
+    <div class="login-box">
+        <form action="/login" method="post">
+            <p class="title">Medi <span class="link">Link</span></p>
+            <div class="username">
+                <label for="username">Username</label>
+                <input type="text" id="username" name="username" placeholder="Enter your Username">
+            </div>
+            <div class="password">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" placeholder="Enter your Password">
+                <i class="fa-solid fa-eye"></i>
+            </div>
+            <button type="submit" class="login-btn">Login</button>
+        </form>
+    </div>
+</div>
+{% endblock%}
+{% block js %}
+<script>
+    const eye = document.querySelector("i");
+    const passwordInput = document.getElementById("password");
+
+    eye.addEventListener('click', () => {
+        if (eye.classList.contains("fa-eye")) {
+            eye.classList.remove("fa-eye");
+            eye.classList.add("fa-eye-slash");
+            passwordInput.type = "password";
+        } else if (eye.classList.contains("fa-eye-slash")) {
+            eye.classList.remove("fa-eye-slash");
+            eye.classList.add("fa-eye");
+            passwordInput.type = "text";
+        }
+    });
+</script>
+{% endblock%}

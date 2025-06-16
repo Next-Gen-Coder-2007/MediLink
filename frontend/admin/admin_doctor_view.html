@@ -1,0 +1,377 @@
+{% extends 'admin/admin_base.html' %}
+{% block admin_css %}
+<style>
+    .main-container{
+        width: 100%;
+        height: 100%;
+    }
+    .title{
+        text-align: center;
+    }
+    .profile-container table {
+        border-collapse: collapse;
+        margin-top: 20px;
+        width: 100%;
+    }
+
+    .profile-container td {
+        height: 50px;
+        border: 2px solid black;
+    }
+
+    .profile-container {
+        padding: 20px;
+        max-width: 800px;
+        margin: auto;
+    }
+    .profile-header {
+        text-align: center;
+        margin-bottom: 20px;
+    }
+    .profile-header img{
+        border-radius: 100%;
+    }
+    .profile-picture {
+        width: 150px;
+        height: 150px;
+        border-radius: 50%;
+        object-fit: cover;
+    }
+    .profile-details {
+        margin-top: 20px;
+    }
+    .profile-details table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    .profile-details th, .profile-details td {
+        padding: 10px;
+        border: 2px solid black;
+        text-align: left;
+    }
+    .profile-details th {
+        background-color: green;
+        width: 30%;
+        color: white;
+    }
+    .appointments{
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+    }
+    .search-appointments{
+        width: 100%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 10px 20px;
+        border-radius: 50px;
+        box-shadow: 0 0 10px 1px rgba(0,0,0,0.3);
+        margin: 20px 0;
+    }
+    #searchAppointments{
+        width: 70%;
+        font-size: 20px;
+        background-color: transparent;
+        margin-right: 20px;
+        border: none;
+    }
+    #appointmentDate{
+        margin-left: 20px;
+        font-size: 15px;
+        background-color: transparent;
+        border: 1px dotted lightgray;
+        padding: 10px;
+        border-radius: 10px;
+    }
+    .search-appointments select{
+        font-size: 15px;
+        background-color: transparent;
+        border: 1px dotted lightgray;
+        padding: 10px;
+        border-radius: 10px;
+    }
+    #searchAppointments:focus{
+        outline: none;
+    }
+    .appointments-table {
+        width: 100%;
+        max-height: 40vh;
+        overflow-y: auto;
+        border: 1px solid #ccc;
+        border-radius: 10px;
+        margin-bottom: 100px;
+    }
+
+    .appointments-table table {
+        width: 100%;
+        border-collapse: collapse;
+        font-family: Arial, sans-serif;
+    }
+
+    .appointments-table th,
+    .appointments-table td {
+        padding: 12px 15px;
+        text-align: center;
+        border-bottom: 1px solid #ddd;
+    }
+
+    .appointments-table th {
+        background-color: green;
+        color: white;
+        font-size: 16px;
+        position: sticky;
+        top: 0;
+        z-index: 1;
+    }
+
+    .appointments-table td {
+        background-color: #fff;
+    }
+
+    .appointments-table::-webkit-scrollbar {
+        width: 10px;
+    }
+
+    .appointments-table::-webkit-scrollbar-track {
+        background: #e0f2e0;
+        border-radius: 10px;
+    }
+
+    .appointments-table::-webkit-scrollbar-thumb {
+        background-color: green;
+        border-radius: 10px;
+        border: 2px solid #e0f2e0;
+    }
+
+    .appointments-table::-webkit-scrollbar-thumb:hover {
+        background-color: #0b7d0b;
+    }
+    .prescriptions{
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+    }
+    .search-prescriptions{
+        width: 100%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 10px 20px;
+        border-radius: 50px;
+        box-shadow: 0 0 10px 1px rgba(0,0,0,0.3);
+        margin: 20px 0;
+    }
+    #searchPrescriptions{
+        width: 70%;
+        font-size: 20px;
+        background-color: transparent;
+        margin-right: 20px;
+        border: none;
+    }
+    #prescriptionDate{
+        margin-left: 20px;
+        font-size: 15px;
+        background-color: transparent;
+        border: 1px dotted lightgray;
+        padding: 10px;
+        border-radius: 10px;
+    }
+    .search-prescriptions select{
+        font-size: 15px;
+        background-color: transparent;
+        border: 1px dotted lightgray;
+        padding: 10px;
+        border-radius: 10px;
+    }
+    #searchprescriptions:focus{
+        outline: none;
+    }
+    .prescriptions-table {
+        width: 100%;
+        max-height: 40vh;
+        overflow-y: auto;
+        border: 1px solid #ccc;
+        border-radius: 10px;
+        margin-bottom: 100px;
+    }
+
+    .prescriptions-table table {
+        width: 100%;
+        border-collapse: collapse;
+        font-family: Arial, sans-serif;
+    }
+
+    .prescriptions-table th,
+    .prescriptions-table td {
+        padding: 12px 15px;
+        text-align: center;
+        border-bottom: 1px solid #ddd;
+    }
+
+    .prescriptions-table th {
+        background-color: green;
+        color: white;
+        font-size: 16px;
+        position: sticky;
+        top: 0;
+        z-index: 1;
+    }
+
+    .prescriptions-table td {
+        background-color: #fff;
+    }
+
+    .prescriptions-table::-webkit-scrollbar {
+        width: 10px;
+    }
+
+    .prescriptions-table::-webkit-scrollbar-track {
+        background: #e0f2e0;
+        border-radius: 10px;
+    }
+
+    .prescriptions-table::-webkit-scrollbar-thumb {
+        background-color: green;
+        border-radius: 10px;
+        border: 2px solid #e0f2e0;
+    }
+
+    .prescriptions-table::-webkit-scrollbar-thumb:hover {
+        background-color: #0b7d0b;
+    }
+
+</style>
+{% endblock %}
+{% block admin_content %}
+<div class="main-container">
+    <h1 class="title">Doctor's Profile</h1>
+    <div class="profile-container">
+        <div class="profile-header">
+            {% if doctor.user.photo %}
+                <img src="data:image/jpeg;base64,{{ doctor.user.photo }}" alt="Photo" width="200" height="200">
+            {% else %}
+                No Photo
+            {% endif %}
+            <h2>{{ doctor.user.first_name }} {{ doctor.user.last_name }}</h2>
+            <p>{{ doctor.specialization }}</p>
+        </div>
+
+        <div class="profile-details">
+            <table>
+                <tr>
+                    <th>Qualification</th>
+                    <td>{{ doctor.qualification }}</td>
+                    <th>Experience</th>
+                    <td>{{ doctor.experience_years }} years</td>
+                </tr>
+                <tr>
+                    <th>Specialization</th>
+                    <td>{{ doctor.specialization }}</td>
+                    <th>Department</th>
+                    <td>{{ doctor.department.name if doctor.department else 'N/A' }}</td>
+                </tr>
+                <tr>
+                    <th>Consultation Fee</th>
+                    <td>${{ "%.2f"|format(doctor.consultation_fee) }}</td>
+                    <th>Availability</th>
+                    <td>{{ 'Available' if doctor.is_available else 'Not Available' }}</td>
+                </tr>
+                <tr>
+                    <th>License Number</th>
+                    <td>{{ doctor.license_number }}</td>
+                    <th>User ID</th>
+                    <td>{{ doctor.user_id }}</td>
+                </tr>
+            </table>
+        </div>
+    </div>
+    <div class="appointments">
+        <h1>Appointments</h1>
+        <div class="search-appointments">
+            <input type="text" name="searchAppointments" id="searchAppointments" placeholder="Enter Patient Name">
+            <select name="" id="">
+                <option value="" disabled selected>Select Status</option>
+                <option value="1">scheduled</option>
+                <option value="2">confirmed</option>
+                <option value="3">in_progress</option>
+                <option value="4">completed</option>
+                <option value="5">cancelled</option>
+                <option value="6">no_show</option>
+            </select>
+            <input type="date" name="appointmentDate" id="appointmentDate">
+        </div>
+        <div class="appointments-table">
+            <table>
+                <tr>
+                    <th>ID</th>
+                    <th>Patient Name</th>
+                    <th>Appointment Date & Time</th>
+                    <th>Status</th>
+                    <th>Reason</th>
+                    <th>Notes</th>
+                </tr>
+                <tr>
+                    {% if doctor.appointments %}
+                    {% for appointment in doctor.appointments %}
+                    <td>{{ appointment.id }}</td>
+                    <td>{{ appointment.patient.user.first_name }} {{ appointment.patient.user.last_name }}</td>
+                    <td>{{ appointment.appointment_date }} & {{ appointment.appointment_time }}</td>
+                    <td>{{ appointment.status }}</td>
+                    <td>{{ appointment.reason }}</td>
+                    <td>{{ appointment.notes }}</td>
+                    {% endfor %}
+                    {% else %}
+                    <td colspan="6">No Appointments Found</td>
+                    {% endif %}
+                </tr>
+            </table>
+        </div>
+    </div>
+    <div class="prescriptions">
+        <h1>Prescriptions</h1>
+        <div class="search-prescriptions">
+            <input type="text" name="searchPrescriptions" id="searchPrescriptions" placeholder="Enter Patient Name">
+            <select name="" id="">
+                <option value="" disabled selected>Select Status</option>
+                <option value="1">prescribed</option>
+                <option value="2">fulfilled</option>
+                <option value="3">partially_fulfilled</option>
+                <option value="4">cancelled</option>
+            </select>
+            <input type="date" name="prescriptionDate" id="prescriptionDate">
+        </div>
+        <div class="prescriptions-table">
+            <table>
+                <tr>
+                    <th>ID</th>
+                    <th>Patient Name</th>
+                    <th>Appointment ID</th>
+                    <th>Status</th>
+                    <th>Prescription Date</th>
+                    <th>Notes</th>
+                </tr>
+                <tr>
+                    {% if doctor.prescriptions %}
+                    {% for prescription in doctor.prescriptions %}
+                    <td>{{ prescription.id }}</td>
+                    <td>{{ prescription.patient.user.first_name }} {{ prescription.patient.user.last_name }}</td>
+                    <td>{{ prescription.appointment_id }}</td>
+                    <td>{{ prescription.status }}</td>
+                    <td>{{ prescription.prescription_date }}</td>
+                    <td>{{ prescription.notes }}</td>
+                    {% endfor %}
+                    {% else %}
+                    <td colspan="6">No Prescriptions Found</td>
+                    {% endif %}
+                </tr>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block admin_js %}{% endblock %}
