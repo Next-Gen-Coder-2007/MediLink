@@ -43,6 +43,7 @@ A comprehensive web-based system designed to manage various aspects of hospital 
 - **Manage Pharmacists:** Add, edit, deactivate pharmacists, and view the list of pharmacists.
 - **Manage Patients:** View and deactivate patient accounts, and view the list of patients.
 - **Department Management:** Add, edit, and manage hospital departments.
+- **Ward Management:** Add, edit, and manage wards within departments.
 - **System Configuration:** Configure system settings, email settings, and security settings.
 - **Reports and Analytics:** Generate and view reports on system usage and hospital operations.
 
