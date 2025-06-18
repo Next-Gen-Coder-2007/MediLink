@@ -32,47 +32,6 @@ A comprehensive web-based system designed to manage various aspects of hospital 
 - **Lab Test Management:** Record and update lab test results and track samples.
 - **Billing and Payments:** Manage billing information and process payments.
 
-## Models
-
-### Department Model
-
-The `Department` model represents different departments within the hospital, such as Cardiology, Neurology, Pediatrics, etc.
-
-#### Attributes
-
-- **id:** A unique identifier for each department.
-- **name:** The name of the department.
-- **description:** A brief description of the department's functions or specialties.
-- **head_doctor_id:** A foreign key referencing the `Doctor` model, indicating the doctor who heads the department.
-- **is_active:** A boolean flag indicating whether the department is currently active.
-- **created_at:** The timestamp when the department record was created.
-
-#### Relationships
-
-- **head_doctor:** A relationship to the `Doctor` model, representing the doctor who is the head of the department.
-- **doctors:** A relationship to the `Doctor` model, representing all doctors associated with the department.
-- **nurses:** A relationship to the `Nurse` model, representing all nurses associated with the department.
-- **wards:** A relationship to the `Ward` model, representing all wards within the department.
-
-### Ward Model
-
-The `Ward` model represents different wards within a department, such as ICU, General Ward, Maternity Ward, etc.
-
-#### Attributes
-
-- **id:** A unique identifier for each ward.
-- **name:** The name of the ward.
-- **department_id:** A foreign key referencing the `Department` model, indicating the department to which the ward belongs.
-- **capacity:** The maximum number of patients the ward can accommodate.
-- **current_occupancy:** The current number of patients in the ward.
-- **is_active:** A boolean flag indicating whether the ward is currently active.
-
-#### Relationships
-
-- **department:** A relationship to the `Department` model, representing the department to which the ward belongs.
-- **nurses:** A relationship to the `Nurse` model, representing all nurses assigned to the ward.
-- **patient_admissions:** A relationship to the `PatientAdmission` model, representing all patient admissions to the ward.
-
 ## User Roles and Pages
 
 ### Admin
@@ -83,6 +42,7 @@ The `Ward` model represents different wards within a department, such as ICU, Ge
 - **Manage Lab Technicians:** Add, edit, deactivate lab technicians, and view the list of lab technicians.
 - **Manage Pharmacists:** Add, edit, deactivate pharmacists, and view the list of pharmacists.
 - **Manage Patients:** View and deactivate patient accounts, and view the list of patients.
+- **Department Management:** Add, edit, and manage hospital departments.
 - **System Configuration:** Configure system settings, email settings, and security settings.
 - **Reports and Analytics:** Generate and view reports on system usage and hospital operations.
 
@@ -95,9 +55,13 @@ The `Ward` model represents different wards within a department, such as ICU, Ge
 
 ### Nurse
 
-- **Nurse Dashboard:** Overview of assigned patients and tasks.
+- **Nurse Dashboard:** Overview of assigned patients, tasks, and ward information.
 - **Vital Records:** Record and update patient vital signs.
 - **Patient Admission:** Manage patient admissions and discharges.
+- **Ward Access:** View and manage ward-specific information, including bed availability and patient assignments.
+  - **Ward Overview:** View details of the ward, including current occupancy and capacity.
+  - **Patient Assignment:** Assign patients to beds within the ward and update their status.
+  - **Ward Reports:** Generate reports specific to the ward, such as patient turnover and bed utilization.
 
 ### Lab Technician
 
