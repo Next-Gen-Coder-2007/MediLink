@@ -539,8 +539,6 @@ def login():
 
         # Query the database for the user
         user = User.query.filter_by(username=username).first()
-        print(f"User found: {user}")  # Debug print
-
         # Check if the user exists and the password is correct
         if user and user.password_hash == password:
             login_user(user)
@@ -559,7 +557,8 @@ def login():
             elif user.role == UserRole.PHARMACIST:
                 return redirect(url_for('pharmacist_dashboard'))
             elif user.role == UserRole.PATIENT:
-                return redirect(url_for('patient_dashboard'))
+                user = User.query.filter_by(username=username).first()
+                return redirect(url_for('patient', user_id = user.id))
         else:
             flash('Invalid username or password')
 
@@ -969,6 +968,13 @@ def admin_pharmacists():
 def doctor(user_id):
     doctor = Doctor.query.filter_by(user_id = user_id).first()
     return render_template('doctor/doctor_home.html',doctor = doctor)
+
+@app.route('/patient/<int:user_id>')
+@login_required
+@role_required(UserRole.PATIENT)
+def patient(user_id):
+    patient = Patient.query.filter_by(user_id = user_id).first()
+    return render_template('patient/patient_home.html',patient = patient)
 
 @app.route('/logout')
 @login_required
