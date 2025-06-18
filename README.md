@@ -5,6 +5,9 @@ A comprehensive web-based system designed to manage various aspects of hospital 
 ## Table of Contents
 
 - [Features](#features)
+- [Models](#models)
+  - [Department Model](#department-model)
+  - [Ward Model](#ward-model)
 - [User Roles and Pages](#user-roles-and-pages)
   - [Admin](#admin)
   - [Doctor](#doctor)
@@ -28,6 +31,47 @@ A comprehensive web-based system designed to manage various aspects of hospital 
 - **Prescription and Inventory Management:** Create, manage prescriptions, and track medicine inventory.
 - **Lab Test Management:** Record and update lab test results and track samples.
 - **Billing and Payments:** Manage billing information and process payments.
+
+## Models
+
+### Department Model
+
+The `Department` model represents different departments within the hospital, such as Cardiology, Neurology, Pediatrics, etc.
+
+#### Attributes
+
+- **id:** A unique identifier for each department.
+- **name:** The name of the department.
+- **description:** A brief description of the department's functions or specialties.
+- **head_doctor_id:** A foreign key referencing the `Doctor` model, indicating the doctor who heads the department.
+- **is_active:** A boolean flag indicating whether the department is currently active.
+- **created_at:** The timestamp when the department record was created.
+
+#### Relationships
+
+- **head_doctor:** A relationship to the `Doctor` model, representing the doctor who is the head of the department.
+- **doctors:** A relationship to the `Doctor` model, representing all doctors associated with the department.
+- **nurses:** A relationship to the `Nurse` model, representing all nurses associated with the department.
+- **wards:** A relationship to the `Ward` model, representing all wards within the department.
+
+### Ward Model
+
+The `Ward` model represents different wards within a department, such as ICU, General Ward, Maternity Ward, etc.
+
+#### Attributes
+
+- **id:** A unique identifier for each ward.
+- **name:** The name of the ward.
+- **department_id:** A foreign key referencing the `Department` model, indicating the department to which the ward belongs.
+- **capacity:** The maximum number of patients the ward can accommodate.
+- **current_occupancy:** The current number of patients in the ward.
+- **is_active:** A boolean flag indicating whether the ward is currently active.
+
+#### Relationships
+
+- **department:** A relationship to the `Department` model, representing the department to which the ward belongs.
+- **nurses:** A relationship to the `Nurse` model, representing all nurses assigned to the ward.
+- **patient_admissions:** A relationship to the `PatientAdmission` model, representing all patient admissions to the ward.
 
 ## User Roles and Pages
 
