@@ -1,8 +1,5 @@
 Flask
 Flask-Login
-Flask-WTF
 Flask-SQLAlchemy
-WTForms
-email-validator
 Pillow
 waitress
