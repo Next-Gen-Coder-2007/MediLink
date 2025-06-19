@@ -7,6 +7,8 @@ import enum
 from PIL import Image
 import io
 import base64
+import json
+from decimal import Decimal
 
 def compress_and_encode_image(photo, quality=40, max_width=800):
     if not photo:
@@ -23,6 +25,25 @@ def compress_and_encode_image(photo, quality=40, max_width=800):
     img_io.seek(0)
     image_base64 = base64.b64encode(img_io.read()).decode('utf-8')
     return image_base64
+def model_to_dict(model):
+    result = {}
+    for column in model.__table__.columns:
+        value = getattr(model, column.name)
+
+        # Handle enums
+        if isinstance(value, enum.Enum):
+            value = value.name
+
+        # Handle datetime
+        elif isinstance(value, datetime):
+            value = value.isoformat()  # or strftime
+
+        # Handle Decimal
+        elif isinstance(value, Decimal):
+            value = float(value)  # or str(value) if precision matters
+
+        result[column.name] = value
+    return result
 
 app = Flask(__name__, template_folder="../frontend")
 app.secret_key = 'secret-code'
@@ -628,7 +649,6 @@ def register():
             db.session.rollback()
             flash(f"Error during registration: {str(e)}", "danger")
             return redirect(url_for('register'))
-
     return render_template('register.html')
 
 @app.route("/admin")
@@ -699,6 +719,16 @@ def admin_doctors_create():
                 is_available=True
             )
             db.session.add(new_doctor)
+            user_json = [model_to_dict(new_user)]
+            doctor_json = [model_to_dict(new_doctor)]
+            new_audit = AuditLog(
+                user_id = current_user.id,
+                action = "Created a Doctor",
+                table_name = "Doctors",
+                new_values = {user_json, doctor_json},
+                ip_address = request.remote_addr
+            )
+            db.session.add(new_audit)
             db.session.commit()
             flash('Doctor created successfully!', 'success')
             return redirect(url_for('admin_doctors'))
@@ -713,6 +743,8 @@ def admin_doctors_edit(doctor_id):
     try:
         doctor = Doctor.query.get_or_404(doctor_id)
         user = User.query.get_or_404(doctor.user_id)
+        user_json = model_to_dict(user)
+        doctor_json = model_to_dict(doctor)
         if current_user.role == UserRole.DOCTOR and current_user.id != doctor.user_id:
             flash("Dont Access Others")
             return redirect(url_for('login'))
@@ -739,9 +771,28 @@ def admin_doctors_edit(doctor_id):
             doctor.consultation_fee = request.form['consultation_fee']
 
             db.session.commit()
+            new_user_json = model_to_dict(user)
+            new_doctor_json = model_to_dict(doctor)
+            # Combine and log
+            new_audit = AuditLog(
+                user_id=current_user.id,
+                action="Edited a Doctor",
+                table_name="Doctors",
+                old_values=json.dumps({
+                    "user": user_json,
+                    "doctor": doctor_json
+                }),
+                new_values=json.dumps({
+                    "user": new_user_json,
+                    "doctor": new_doctor_json
+                }),
+                ip_address=request.headers.get('X-Forwarded-For', request.remote_addr),
+                user_agent=request.headers.get('User-Agent')
+            )
+            db.session.add(new_audit)
+            db.session.commit()
             flash('Doctor updated successfully!', 'success')
             return redirect(url_for('admin_doctors'))
-
     except Exception as e:
         db.session.rollback()
         flash(f"Error during update: {str(e)}", "danger")
@@ -751,7 +802,17 @@ def admin_doctors_edit(doctor_id):
 @role_required(UserRole.ADMIN)
 def admin_doctors_deactivate(doctor_id):
     doctor = Doctor.query.get_or_404(doctor_id)
+    doctor_json = model_to_dict(doctor)
     doctor.user.is_active = False
+    db.session.commit()
+    new_audit = AuditLog(
+        user_id = current_user.id,
+        action = "Deactivated a Doctor",
+        table_name = "Doctors",
+        new_values = {doctor_json},
+        ip_address = request.remote_addr
+    )
+    db.session.add(new_audit)
     db.session.commit()
     flash('Doctor Deactivated successfully!', 'success')
     return redirect(url_for('admin_doctors'))
@@ -760,7 +821,17 @@ def admin_doctors_deactivate(doctor_id):
 @role_required(UserRole.ADMIN)
 def admin_doctors_activate(doctor_id):
     doctor = Doctor.query.get_or_404(doctor_id)
+    doctor_json = model_to_dict(doctor)
     doctor.user.is_active = True
+    db.session.commit()
+    new_audit = AuditLog(
+        user_id = current_user.id,
+        action = "Activated a Doctor",
+        table_name = "Doctors",
+        new_values = {doctor_json},
+        ip_address = request.remote_addr
+    )
+    db.session.add(new_audit)
     db.session.commit()
     flash('Doctor Recovered successfully!', 'success')
     return redirect(url_for('admin_doctors'))
@@ -824,6 +895,16 @@ def admin_nurses_create():
                 shift=shift,
             )
             db.session.add(new_nurse)
+            user_json = model_to_dict(new_user)
+            nurse_json = model_to_dict(new_nurse)
+            new_audit = AuditLog(
+                user_id = current_user.id,
+                action = "Created a Nurse",
+                table_name = "Nurses",
+                new_values = {user_json, nurse_json},
+                ip_address = request.remote_addr
+            )
+            db.session.add(new_audit)
             db.session.commit()
             flash('Nurse created successfully!', 'success')
             return redirect(url_for('admin_nurses'))
@@ -838,6 +919,8 @@ def admin_nurses_edit(nurse_id):
     try:
         nurse = Nurse.query.get_or_404(nurse_id)
         user = User.query.get_or_404(nurse.user_id)
+        user_json = model_to_dict(user)
+        nurse_json = model_to_dict(nurse)
         if current_user.role == UserRole.NURSE and current_user.id != nurse.user_id:
             flash("Dont Access Others")
             return redirect(url_for('login'))
@@ -861,6 +944,18 @@ def admin_nurses_edit(nurse_id):
             nurse.shift = request.form['shift']
 
             db.session.commit()
+            new_user_json = model_to_dict(user)
+            new_nurse_json = model_to_dict(nurse)
+            new_audit = AuditLog(
+                user_id = current_user.id,
+                action = "Edited a Nurse",
+                table_name = "Nurses",
+                old_values = {user_json, nurse_json},
+                new_values = {new_user_json, new_nurse_json},
+                ip_address = request.remote_addr
+            )
+            db.session.add(new_audit)
+            db.session.commit()
             flash('Nurse updated successfully!', 'success')
             return redirect(url_for('admin_nurses'))
 
@@ -873,7 +968,19 @@ def admin_nurses_edit(nurse_id):
 @role_required(UserRole.ADMIN)
 def admin_nurses_deactivate(nurse_id):
     nurse = Nurse.query.get_or_404(nurse_id)
+    nurse_json = model_to_dict(nurse)
     nurse.user.is_active = False
+    db.session.commit()
+    new_nurse_json = model_to_dict(nurse)
+    new_audit = AuditLog(
+        user_id = current_user.id,
+        action = "Deactivated a Nurse",
+        table_name = "Nurses",
+        old_values = {nurse_json},
+        new_values = {new_nurse_json},
+        ip_address = request.remote_addr
+    )
+    db.session.add(new_audit)
     db.session.commit()
     flash('Nurse Deactivated successfully!', 'success')
     return redirect(url_for('admin_nurses'))
@@ -882,7 +989,20 @@ def admin_nurses_deactivate(nurse_id):
 @role_required(UserRole.ADMIN)
 def admin_nurses_activate(nurse_id):
     nurse = Nurse.query.get_or_404(nurse_id)
+    nurse_json = model_to_dict(nurse)
     nurse.user.is_active = True
+    db.session.commit()
+    new_nurse_json = model_to_dict(nurse)
+    new_audit = AuditLog(
+        user_id = current_user.id,
+        action = "Activated a Nurse",
+        table_name = "Nurses",
+        old_values = json.dumps(nurse_json),
+        new_values = json.dumps(new_nurse_json),
+        ip_address = request.headers.get('X-Forwarded-For', request.remote_addr),
+        user_agent = request.headers.get('User-Agent')
+    )
+    db.session.add(new_audit)
     db.session.commit()
     flash('Nurse Recovered successfully!', 'success')
     return redirect(url_for('admin_nurses'))
@@ -1255,6 +1375,12 @@ def logout():
     logout_user()
     flash('Logged out successfully.', 'info')
     return redirect(url_for('home'))
+
+@app.route('/admin/audit-logs')
+@login_required
+def view_audit_logs():
+    logs = AuditLog.query.order_by(AuditLog.timestamp.desc()).all()
+    return render_template('admin/admin_audit_logs.html', audit_logs=logs)
 
 if __name__ == '__main__':
     with app.app_context():
