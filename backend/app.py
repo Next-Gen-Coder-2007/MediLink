@@ -4,10 +4,6 @@ from flask_login import LoginManager, login_user, logout_user, login_required, c
 from datetime import datetime
 from flask_sqlalchemy import SQLAlchemy
 import enum
-from flask_wtf import FlaskForm
-from wtforms import StringField, IntegerField, DecimalField, BooleanField, SelectField, FileField, SubmitField
-from wtforms.validators import DataRequired, Email, Length, Optional
-from flask_wtf.file import FileAllowed
 from PIL import Image
 import io
 import base64
