@@ -722,11 +722,15 @@ def admin_doctors_create():
             user_json = [model_to_dict(new_user)]
             doctor_json = [model_to_dict(new_doctor)]
             new_audit = AuditLog(
-                user_id = current_user.id,
-                action = "Created a Doctor",
-                table_name = "Doctors",
-                new_values = {user_json, doctor_json},
-                ip_address = request.remote_addr
+                user_id=current_user.id,
+                action="Created a Doctor",
+                table_name="Doctors",
+                new_values=json.dumps({
+                    "user": user_json,
+                    "doctor": doctor_json
+                }),
+                ip_address=request.headers.get('X-Forwarded-For', request.remote_addr),
+                user_agent=request.headers.get('User-Agent')
             )
             db.session.add(new_audit)
             db.session.commit()
@@ -812,6 +816,16 @@ def admin_doctors_deactivate(doctor_id):
         new_values = {doctor_json},
         ip_address = request.remote_addr
     )
+    new_audit = AuditLog(
+        user_id=current_user.id,
+        action="Deactivated a Doctor",
+        table_name="Doctors",
+        new_values=json.dumps({
+            "doctor": doctor_json
+        }),
+        ip_address=request.headers.get('X-Forwarded-For', request.remote_addr),
+        user_agent=request.headers.get('User-Agent')
+    )
     db.session.add(new_audit)
     db.session.commit()
     flash('Doctor Deactivated successfully!', 'success')
@@ -825,11 +839,14 @@ def admin_doctors_activate(doctor_id):
     doctor.user.is_active = True
     db.session.commit()
     new_audit = AuditLog(
-        user_id = current_user.id,
-        action = "Activated a Doctor",
-        table_name = "Doctors",
-        new_values = {doctor_json},
-        ip_address = request.remote_addr
+        user_id=current_user.id,
+        action="Activated a Doctor",
+        table_name="Doctors",
+        new_values=json.dumps({
+            "doctor": doctor_json
+        }),
+        ip_address=request.headers.get('X-Forwarded-For', request.remote_addr),
+        user_agent=request.headers.get('User-Agent')
     )
     db.session.add(new_audit)
     db.session.commit()
@@ -898,11 +915,15 @@ def admin_nurses_create():
             user_json = model_to_dict(new_user)
             nurse_json = model_to_dict(new_nurse)
             new_audit = AuditLog(
-                user_id = current_user.id,
-                action = "Created a Nurse",
-                table_name = "Nurses",
-                new_values = {user_json, nurse_json},
-                ip_address = request.remote_addr
+                user_id=current_user.id,
+                action="Created a Nurse",
+                table_name="Nurses",
+                new_values=json.dumps({
+                    "user": user_json,
+                    "nurse": nurse_json
+                }),
+                ip_address=request.headers.get('X-Forwarded-For', request.remote_addr),
+                user_agent=request.headers.get('User-Agent')
             )
             db.session.add(new_audit)
             db.session.commit()
@@ -954,6 +975,15 @@ def admin_nurses_edit(nurse_id):
                 new_values = {new_user_json, new_nurse_json},
                 ip_address = request.remote_addr
             )
+            new_audit = AuditLog(
+                user_id = current_user.id,
+                action = "Edited a Nurse",
+                table_name = "Nurses",
+                old_values = json.dumps({user_json, nurse_json}),
+                new_values = json.dumps({new_user_json, new_nurse_json}),
+                ip_address = request.headers.get('X-Forwarded-For', request.remote_addr),
+                user_agent = request.headers.get('User-Agent')
+            )
             db.session.add(new_audit)
             db.session.commit()
             flash('Nurse updated successfully!', 'success')
@@ -976,9 +1006,10 @@ def admin_nurses_deactivate(nurse_id):
         user_id = current_user.id,
         action = "Deactivated a Nurse",
         table_name = "Nurses",
-        old_values = {nurse_json},
-        new_values = {new_nurse_json},
-        ip_address = request.remote_addr
+        old_values = json.dumps(nurse_json),
+        new_values = json.dumps(new_nurse_json),
+        ip_address = request.headers.get('X-Forwarded-For', request.remote_addr),
+        user_agent = request.headers.get('User-Agent')
     )
     db.session.add(new_audit)
     db.session.commit()
