@@ -1,7 +1,7 @@
 {% extends 'admin/admin_base.html' %}
 {% block admin_css %}
 <style>
-    .nurses-container {
+    .lab-technicians-container {
         width: 100%;
         display: flex;
         justify-content: space-between;
@@ -61,27 +61,27 @@
         box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
     }
 
-    .nurses-table {
+    .lab-technicians-table {
         max-height: 75vh;
         overflow-y: auto;
         border: 1px solid #ccc;
         border-radius: 10px;
     }
 
-    .nurses-table table {
+    .lab-technicians-table table {
         width: 100%;
         border-collapse: collapse;
         font-family: Arial, sans-serif;
     }
 
-    .nurses-table th,
-    .nurses-table td {
+    .lab-technicians-table th,
+    .lab-technicians-table td {
         padding: 12px 15px;
         text-align: center;
         border-bottom: 1px solid #ddd;
     }
 
-    .nurses-table th {
+    .lab-technicians-table th {
         background-color: green;
         color: white;
         font-size: 16px;
@@ -90,26 +90,26 @@
         z-index: 1;
     }
 
-    .nurses-table td {
+    .lab-technicians-table td {
         background-color: #fff;
     }
 
-    .nurses-table::-webkit-scrollbar {
+    .lab-technicians-table::-webkit-scrollbar {
         width: 10px;
     }
 
-    .nurses-table::-webkit-scrollbar-track {
+    .lab-technicians-table::-webkit-scrollbar-track {
         background: #e0f2e0;
         border-radius: 10px;
     }
 
-    .nurses-table::-webkit-scrollbar-thumb {
+    .lab-technicians-table::-webkit-scrollbar-thumb {
         background-color: green;
         border-radius: 10px;
         border: 2px solid #e0f2e0;
     }
 
-    .nurses-table::-webkit-scrollbar-thumb:hover {
+    .lab-technicians-table::-webkit-scrollbar-thumb:hover {
         background-color: #0b7d0b;
     }
 
@@ -287,7 +287,7 @@
 
     /* Responsive Design */
     @media (max-width: 768px) {
-        .nurses-container {
+        .lab-technicians-container {
             flex-direction: column;
             align-items: stretch;
         }
@@ -352,68 +352,65 @@
         transform: scale(0.98);
     }
 </style>
+</style>
 {% endblock %}
 {% block admin_content %}
-<div class="nurses-container">
-    <p class="heading">Nurses</p>
+<div class="lab-technicians-container">
+    <p class="heading">Lab Technicians</p>
     <div class="search-box">
         <i class="fas fa-search"></i>
-        <input type="text" name="search" id="search" placeholder="Enter the Name or License No or Shift">
+        <input type="text" name="search" id="search" placeholder="Enter the Name or License No or Specialization">
     </div>
-    <button id="openModalBtn" class="add-btn">+ Add New Nurse</a>
+    <button id="openModalBtn" class="add-btn">+ Add New Lab Technician</button>
 </div>
-<div class="nurses-table">
+<div class="lab-technicians-table">
     <table>
         <tr>
             <th>ID</th>
             <th>Photo</th>
             <th>Full Name</th>
             <th>License Number</th>
-            <th>Shift</th>
+            <th>Specialization</th>
             <th>Actions</th>
         </tr>
-        {% if nurses %}
-            {% for nurse in nurses %}
-                <tr>
-                    <td>{{ nurse.id }}</td>
-                    <td>
-                        {% if nurse.user and nurse.user.photo %}
-                            <img src="data:image/jpeg;base64,{{ nurse.user.photo }}" alt="Photo" width="50" height="50">
-                        {% else %}
-                            No Photo
-                            <p>{{ nurse.user.photo }}</p>
-                        {% endif %}
-                    </td>
-                    <td>{{ nurse.user.first_name }} {{ nurse.user.last_name }}</td>
-                    <td>{{ nurse.license_number }}</td>
-                    <td>{{ nurse.shift }}</td>
-                    <td class="action-buttons">
-                        <button class="btn edit-btn" id="editbtn-{{ nurse.id }}">Edit</button>
-                        {% if nurse.user.is_active %}
-                            <a href="{{ url_for('admin_nurses_deactivate', nurse_id=nurse.id) }}"
-                            class="btn deactivate-btn"
-                            onclick="return confirm('Are you sure you want to deactivate this nurse?');">Deactivate</a>
-                        {% else %}
-                            <a href="{{ url_for('admin_nurses_activate', nurse_id=nurse.id) }}"
-                            class="btn activate-btn"
-                            onclick="return confirm('Activate this nurse?');">Activate</a>
-                        {% endif %}
-                    </td>
-                </tr>
+        {% if lab_technicians %}
+            {% for technician in lab_technicians %}
+            <tr>
+                <td>{{ technician.id }}</td>
+                <td>
+                    {% if technician.user and technician.user.photo %}
+                        <img src="data:image/jpeg;base64,{{ technician.user.photo }}" alt="Photo" width="50" height="50">
+                    {% else %}
+                        No Photo
+                    {% endif %}
+                </td>
+                <td>{{ technician.user.first_name }} {{ technician.user.last_name }}</td>
+                <td>{{ technician.license_number }}</td>
+                <td>{{ technician.specialization }}</td>
+                <td class="action-buttons">
+                    <button class="btn edit-btn" id="editbtn-{{ technician.id }}">Edit</button>
+                    {% if technician.user.is_active %}
+                        <a href="{{ url_for('admin_lab_technicians_deactivate', technician_id=technician.id) }}" class="btn deactivate-btn" onclick="return confirm('Are you sure you want to deactivate this lab technician?');">Deactivate</a>
+                    {% else %}
+                        <a href="{{ url_for('admin_lab_technicians_activate', technician_id=technician.id) }}" class="btn activate-btn" onclick="return confirm('Activate this lab technician?');">Activate</a>
+                    {% endif %}
+                </td>
+            </tr>
             {% endfor %}
         {% else %}
             <tr>
-                <td colspan="6">No Nurses Added</td>
+                <td colspan="7">No Lab Technicians Added</td>
             </tr>
         {% endif %}
     </table>
 </div>
 
-<div id="addNurseModal" class="modal-overlay">
+
+<div id="addlabModal" class="modal-overlay">
     <div class="modal-content-box">
-        <form id="nurseForm" action="{{ url_for('admin_nurses_create') }}" method="post" enctype="multipart/form-data">
+        <form id="labForm" action="{{ url_for('admin_lab_technicians_create') }}" method="post" enctype="multipart/form-data">
             <div class="modal-header">
-                <h2><i class="fas fa-user-md"></i> Add New Nurse</h2>
+                <h2><i class="fas fa-user-md"></i> Add New Lab Technician</h2>
                 <span class="close-btn" id="closeModalBtn">&times;</span>
             </div>
 
@@ -462,41 +459,8 @@
                     </div>
 
                     <div class="form-group">
-                        <label for="department_id">Department *</label>
-                        <select id="department_id" name="department_id" required>
-                            <option value="" disabled selected>Select Department</option>
-                            {% if departments %}
-                            {% for department in departments %}
-                            <option value="{{ department.id }}">{{ department.name }}</option> 
-                            {% endfor %}
-                            {% else %}
-                            <option value="" disabled>Please Add a Department</option>
-                            {% endif %}
-                        </select>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="ward_id">Ward *</label>
-                        <select id="ward_id" name="ward_id" required>
-                            <option value="" disabled selected>Select Ward</option>
-                            {% if wards %}
-                            {% for ward in wards %}
-                            <option value="{{ ward.id }}">{{ ward.name }}</option> 
-                            {% endfor %}
-                            {% else %}
-                            <option value="" disabled>Please Add a Ward</option>
-                            {% endif %}
-                        </select>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="shift">Shift *</label>
-                        <select name="shift" id="shift" required>
-                            <option value="" disabled selected>Select Shift</option>
-                            <option value="morning">Morning</option>
-                            <option value="evening">Evening</option>
-                            <option value="night">Night</option>
-                        </select>
+                        <label for="specialization">Specialization</label>
+                        <input type="text" id="specialization" name="specialization">
                     </div>
                 </div>
             </div>
@@ -508,105 +472,78 @@
                 </button>
                 <button type="submit" class="submit-btn">
                     <i class="fas fa-plus"></i>
-                    Add Nurse
+                    Add Lab Technician
                 </button>
             </div>
         </form>
     </div>
 </div>
 
-{% for nurse in nurses %}
-<div id="editNurseModal-{{ nurse.id }}" class="modal-overlay">
+{% for lab in lab_technicians %}
+<div id="editlabModal-{{ lab.id }}" class="modal-overlay">
     <div class="modal-content-box">
-        <form id="editNurseForm-{{ nurse.id }}" action="{{ url_for('admin_nurses_edit', nurse_id=nurse.id) }}" method="post" enctype="multipart/form-data">
+        <form id="editlabForm-{{ lab.id }}" action="{{ url_for('admin_lab_technicians_edit', technician_id=lab.id) }}" method="post" enctype="multipart/form-data">
             <div class="modal-header">
-                <h2><i class="fas fa-user-edit"></i> Edit nurse</h2>
-                <span class="close-btn" id="closeEditModalBtn-{{ nurse.id }}">&times;</span>
+                <h2><i class="fas fa-user-edit"></i> Edit lab</h2>
+                <span class="close-btn" id="closeEditModalBtn-{{ lab.id }}">&times;</span>
             </div>
 
             <div class="modal-body">
                 <div class="form-grid">
                     <div class="form-group">
-                        <label for="first_name-{{ nurse.id }}">First Name *</label>
-                        <input type="text" id="first_name-{{ nurse.id }}" name="first_name" value="{{ nurse.user.first_name }}" required>
+                        <label for="first_name-{{ lab.id }}">First Name *</label>
+                        <input type="text" id="first_name-{{ lab.id }}" name="first_name" value="{{ lab.user.first_name }}" required>
                     </div>
 
                     <div class="form-group">
-                        <label for="last_name-{{ nurse.id }}">Last Name *</label>
-                        <input type="text" id="last_name-{{ nurse.id }}" name="last_name" value="{{ nurse.user.last_name }}" required>
+                        <label for="last_name-{{ lab.id }}">Last Name *</label>
+                        <input type="text" id="last_name-{{ lab.id }}" name="last_name" value="{{ lab.user.last_name }}" required>
                     </div>
 
                     <div class="form-group">
-                        <label for="email-{{ nurse.id }}">Email Address *</label>
-                        <input type="email" id="email-{{ nurse.id }}" name="email" value="{{ nurse.user.email }}" required>
+                        <label for="email-{{ lab.id }}">Email Address *</label>
+                        <input type="email" id="email-{{ lab.id }}" name="email" value="{{ lab.user.email }}" required>
                     </div>
 
                     <div class="form-group">
-                        <label for="phone-{{ nurse.id }}">Phone Number</label>
-                        <input type="tel" id="phone-{{ nurse.id }}" name="phone" value="{{ nurse.user.phone }}">
+                        <label for="phone-{{ lab.id }}">Phone Number</label>
+                        <input type="tel" id="phone-{{ lab.id }}" name="phone" value="{{ lab.user.phone }}">
                     </div>
 
                     <div class="form-group">
-                        <label for="photo-{{ nurse.id }}">Profile Photo</label>
-                        <input type="file" id="photo-{{ nurse.id }}" name="photo" accept="image/*">
-                        {% if nurse.user.photo %}
-                            <img src="data:image/jpeg;base64,{{ nurse.user.photo }}" alt="Photo" width="50" height="50">
+                        <label for="photo-{{ lab.id }}">Profile Photo</label>
+                        <input type="file" id="photo-{{ lab.id }}" name="photo" accept="image/*">
+                        {% if lab.user.photo %}
+                            <img src="data:image/jpeg;base64,{{ lab.user.photo }}" alt="Photo" width="50" height="50">
                         {% endif %}
                     </div>
 
                     <!-- Account Information -->
                     <div class="form-group">
-                        <label for="username-{{ nurse.id }}">Username *</label>
-                        <input type="text" id="username-{{ nurse.id }}" name="username" value="{{ nurse.user.username }}" required>
+                        <label for="username-{{ lab.id }}">Username *</label>
+                        <input type="text" id="username-{{ lab.id }}" name="username" value="{{ lab.user.username }}" required>
                     </div>
 
                     <div class="form-group">
-                        <label for="password-{{ nurse.id }}">Password *</label>
-                        <input type="password" id="password-{{ nurse.id }}" name="password" placeholder="Leave blank to keep current password">
+                        <label for="password-{{ lab.id }}">Password *</label>
+                        <input type="password" id="password-{{ lab.id }}" name="password" placeholder="Leave blank to keep current password">
                     </div>
 
                     <!-- Professional Information -->
                     <div class="form-group">
-                        <label for="license_number-{{ nurse.id }}">License Number *</label>
-                        <input type="text" id="license_number-{{ nurse.id }}" name="license_number" value="{{ nurse.license_number }}" required>
+                        <label for="license_number-{{ lab.id }}">License Number *</label>
+                        <input type="text" id="license_number-{{ lab.id }}" name="license_number" value="{{ lab.license_number }}" required>
                     </div>
 
                     <div class="form-group">
-                        <label for="department_id-{{ nurse.id }}">Department *</label>
-                        <select id="department_id-{{ nurse.id }}" name="department_id" required>
-                            <option value="" disabled>Select Department</option>
-                            {% for department in departments %}
-                                <option value="{{ department.id }}" {% if nurse.department_id == department.id %}selected{% endif %}>
-                                    {{ department.name }}
-                                </option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="ward_id-{{ nurse.id }}">Ward *</label>
-                        <select id="ward_id-{{ nurse.id }}" name="ward_id" required>
-                            <option value="" disabled>Select Ward</option>
-                            {% for ward in wards %}
-                                <option value="{{ ward.id }}" {% if nurse.ward_id == ward.id %}selected{% endif %}>
-                                    {{ ward.name }}
-                                </option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="shift_id-{{ nurse.id }}">Department *</label>
-                        <select id="shift-{{ nurse.id }}" name="shift" required>
-                            <option value="" disabled selected>Select Shift</option>
-                            <option value="morning" {% if nurse.shift == 'morning' %}selected{% endif %}>Morning</option>
-                            <option value="evening" {% if nurse.shift == 'evening' %}selected{% endif %}>Evening</option>
-                            <option value="night" {% if nurse.shift == 'night' %}selected{% endif %}>Night</option>
-                        </select>
+                        <label for="specialization-{{ lab.id }}">Specialization</label>
+                        <input type="text" id="specialization-{{ lab.id }}" name="specialization" value="{{ lab.specialization }}" required>
                     </div>
                 </div>
             </div>
 
             <div class="modal-footer">
-                <button type="button" id="cancelEditBtn-{{ nurse.id }}" class="cancel-btn">
+                <button type="button" id="cancelEditBtn-{{ lab.id }}" class="cancel-btn">
                     <i class="fas fa-times"></i>
                     Cancel
                 </button>
@@ -625,7 +562,7 @@
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         const searchInput = document.getElementById('search');
-        const tableRows = document.querySelectorAll('.nurses-table table tr');
+        const tableRows = document.querySelectorAll('.lab-technicians-table table tr');
 
         searchInput.addEventListener('keyup', function () {
             const filter = searchInput.value.toLowerCase();
@@ -647,11 +584,11 @@
         });
     });
     document.addEventListener("DOMContentLoaded", () => {
-        const modal = document.getElementById('addNurseModal');
+        const modal = document.getElementById('addlabModal');
         const openBtn = document.getElementById('openModalBtn');
         const closeBtn = document.getElementById('closeModalBtn');
         const cancelBtn = document.getElementById('cancelBtn');
-        const form = document.getElementById('nurseForm');
+        const form = document.getElementById('labForm');
 
         function openModal() {
             modal.classList.add('show');
@@ -736,29 +673,29 @@
         // Add event listeners for all edit buttons
         document.querySelectorAll('[id^="editbtn-"]').forEach(button => {
             button.addEventListener('click', function() {
-                const nurseId = this.id.split('-')[1];
-                openEditModal(`editNurseModal-${nurseId}`);
+                const labId = this.id.split('-')[1];
+                openEditModal(`editlabModal-${labId}`);
             });
         });
 
         // Add event listeners for all close edit buttons
         document.querySelectorAll('[id^="closeEditModalBtn-"]').forEach(button => {
             button.addEventListener('click', function() {
-                const nurseId = this.id.split('-')[1];
-                closeEditModal(`editNurseModal-${nurseId}`);
+                const labId = this.id.split('-')[1];
+                closeEditModal(`editlabModal-${labId}`);
             });
         });
 
         // Add event listeners for all cancel edit buttons
         document.querySelectorAll('[id^="cancelEditBtn-"]').forEach(button => {
             button.addEventListener('click', function() {
-                const nurseId = this.id.split('-')[1];
-                closeEditModal(`editNurseModal-${nurseId}`);
+                const labId = this.id.split('-')[1];
+                closeEditModal(`editlabModal-${labId}`);
             });
         });
 
         // Add event listeners for clicking outside the modal to close it
-        document.querySelectorAll('[id^="editnurseModal-"]').forEach(editmodal => {
+        document.querySelectorAll('[id^="editlabModal-"]').forEach(editmodal => {
             editmodal.addEventListener('click', function(e) {
                 if (e.target === editmodal) {
                     closeEditModal(editmodal.id);
@@ -769,7 +706,7 @@
         // Add event listeners for the Escape key to close the modal
         document.addEventListener('keydown', function(e) {
             if (e.key === 'Escape') {
-                document.querySelectorAll('[id^="editNurseModal-"]').forEach(editmodal => {
+                document.querySelectorAll('[id^="editlabModal-"]').forEach(editmodal => {
                     if (editmodal.classList.contains('show')) {
                         closeEditModal(editmodal.id);
                     }
@@ -778,7 +715,7 @@
         });
 
         // Add event listeners for form validation on submit
-        document.querySelectorAll('[id^="editNurseForm-"]').forEach(editform => {
+        document.querySelectorAll('[id^="editlabForm-"]').forEach(editform => {
             editform.addEventListener('submit', function(e) {
                 const requiredFields = this.querySelectorAll('input[required], select[required]');
                 let iseValid = true;
@@ -799,7 +736,7 @@
         });
 
         // Add event listeners for input validation
-        document.querySelectorAll('[id^="editNurseForm-"]').forEach(form => {
+        document.querySelectorAll('[id^="editlabForm-"]').forEach(form => {
             const inputs = form.querySelectorAll('input, select');
             inputs.forEach(input => {
                 input.addEventListener('blur', function() {

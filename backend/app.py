@@ -507,17 +507,16 @@ class AuditLog(db.Model):
     # Relationships
     user = db.relationship("User")
 
-def role_required(role):
+def role_required(*roles):
     def decorator(f):
         @wraps(f)
         def wrapper(*args, **kwargs):
-            if not current_user.is_authenticated or current_user.role != role:
+            if not current_user.is_authenticated or current_user.role not in roles:
                 flash("You don't have permission to access this page.", "warning")
                 return redirect(request.referrer or url_for('home'))
             return f(*args, **kwargs)
         return wrapper
     return decorator
-
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -640,7 +639,10 @@ def register():
 @login_required
 @role_required(UserRole.ADMIN)
 def admin():
-    return render_template("admin/admin_home.html")
+    doctors = Doctor.query.all()
+    nurses = Nurse.query.all()
+
+    return render_template("admin/admin_home.html", doctors = doctors, nurses = nurses)
 
 # Admin Routes for Doctor Management
 @app.route('/admin/doctors')
@@ -648,7 +650,8 @@ def admin():
 @role_required(UserRole.ADMIN)
 def admin_doctors():
     doctors = Doctor.query.all()
-    return render_template('admin/admin_doctors.html', doctors=doctors)
+    departments = Department.query.all()
+    return render_template('admin/admin_doctors.html', doctors=doctors, departments = departments)
 
 @app.route('/admin/doctors/create', methods=['GET', 'POST'])
 @role_required(UserRole.ADMIN)
@@ -709,30 +712,61 @@ def admin_doctors_create():
         return redirect(url_for('admin_doctors'))
 
 @app.route('/admin/doctors/<int:doctor_id>/edit', methods=['GET', 'POST'])
-@role_required(UserRole.ADMIN)
+@role_required(UserRole.ADMIN, UserRole.DOCTOR)
 def admin_doctors_edit(doctor_id):
-    doctor = Doctor.query.get_or_404(doctor_id)
-    if request.method == 'POST':
-        doctor.user_id = request.form['user_id']
-        doctor.license_number = request.form['license_number']
-        doctor.specialization = request.form['specialization']
-        doctor.department_id = request.form['department_id']
-        doctor.qualification = request.form['qualification']
-        doctor.experience_years = request.form['experience_years']
-        doctor.consultation_fee = request.form['consultation_fee']
-        doctor.is_available = 'is_available' in request.form
+    try:
+        doctor = Doctor.query.get_or_404(doctor_id)
+        user = User.query.get_or_404(doctor.user_id)
+        if current_user.role == UserRole.DOCTOR and current_user.id != doctor.user_id:
+            flash("Dont Access Others")
+            return redirect(url_for('login'))
+        if request.method == 'POST':
+            # Update user information
+            user.username = request.form['username']
+            user.email = request.form['email']
+            user.first_name = request.form['first_name']
+            user.last_name = request.form['last_name']
+            user.phone = request.form['phone']
 
-        db.session.commit()
-        flash('Doctor updated successfully!', 'success')
+            # Handle photo update if a new photo is provided
+            photo = request.files.get('photo')
+            if photo:
+                photo_data = compress_and_encode_image(photo)
+                user.photo = photo_data
+
+            # Update doctor-specific information
+            doctor.license_number = request.form['license_number']
+            doctor.specialization = request.form['specialization']
+            doctor.department_id = request.form['department_id']
+            doctor.qualification = request.form['qualification']
+            doctor.experience_years = request.form['experience_years']
+            doctor.consultation_fee = request.form['consultation_fee']
+
+            db.session.commit()
+            flash('Doctor updated successfully!', 'success')
+            return redirect(url_for('admin_doctors'))
+
+    except Exception as e:
+        db.session.rollback()
+        flash(f"Error during update: {str(e)}", "danger")
         return redirect(url_for('admin_doctors'))
 
-@app.route('/admin/doctors/<int:doctor_id>/delete', methods=['POST'])
+@app.route('/admin/doctors/<int:doctor_id>/deactivate')
 @role_required(UserRole.ADMIN)
-def admin_doctors_delete(doctor_id):
+def admin_doctors_deactivate(doctor_id):
     doctor = Doctor.query.get_or_404(doctor_id)
     doctor.user.is_active = False
     db.session.commit()
-    flash('Doctor deleted successfully!', 'success')
+    flash('Doctor Deactivated successfully!', 'success')
+    return redirect(url_for('admin_doctors'))
+
+@app.route('/admin/doctors/<int:doctor_id>/activate')
+@role_required(UserRole.ADMIN)
+def admin_doctors_activate(doctor_id):
+    doctor = Doctor.query.get_or_404(doctor_id)
+    doctor.user.is_active = True
+    db.session.commit()
+    flash('Doctor Recovered successfully!', 'success')
     return redirect(url_for('admin_doctors'))
 
 @app.route("/admin/doctors/<int:doctor_id>")
@@ -746,82 +780,348 @@ def admin_doctor_view(doctor_id):
 @role_required(UserRole.ADMIN)
 def admin_nurses():
     nurses = Nurse.query.all()
-    return render_template('admin/admin_nurses.html', nurses=nurses)
+    departments = Department.query.all()
+    wards = Ward.query.all()
+    return render_template('admin/admin_nurses.html', nurses=nurses, departments=departments, wards = wards)
 
 @app.route('/admin/nurses/create', methods=['GET', 'POST'])
 @role_required(UserRole.ADMIN)
 def admin_nurses_create():
-    if request.method == 'POST':
-        username = request.form['username']
-        email = request.form['email']
-        password_hash = request.form['password_hash']
-        role = UserRole(request.form['role'])
-        first_name = request.form['first_name']
-        last_name = request.form['last_name']
-        phone = request.form['phone']
-        photo = request.files.get('photo')
-        is_active = True
+    try:
+        if request.method == 'POST':
+            username = request.form['username']
+            email = request.form['email']
+            password_hash = request.form['password']
+            role = UserRole.NURSE
+            first_name = request.form['first_name']
+            last_name = request.form['last_name']
+            phone = request.form['phone']
+            photo = request.files.get('photo')
+            is_active = True
 
-        license_number = request.form['license_number']
-        department_id = request.form['department_id']
-        ward_id = request.form['ward_id']
-        shift = request.form['shift']
-        is_available = 'is_available' in request.form
+            license_number = request.form['license_number']
+            department_id = request.form['department_id']
+            ward_id = request.form['ward_id']
+            shift = request.form['shift']
 
-        photo_data = compress_and_encode_image(photo)
+            photo_data = compress_and_encode_image(photo)
 
-        new_user = User(
-            username=username,
-            email=email,
-            password_hash=password_hash,
-            role=role,
-            first_name=first_name,
-            last_name=last_name,
-            phone=phone,
-            is_active=is_active,
-            photo=photo_data
-        )
-        db.session.add(new_user)
-        db.session.commit()
+            new_user = User(
+                username=username,
+                email=email,
+                password_hash=password_hash,
+                role=role,
+                first_name=first_name,
+                last_name=last_name,
+                phone=phone,
+                is_active=is_active,
+                photo=photo_data
+            )
+            db.session.add(new_user)
+            db.session.commit()
 
-        new_nurse = Nurse(
-            user_id=new_user.id,
-            license_number=license_number,
-            department_id=department_id,
-            ward_id=ward_id,
-            shift=shift,
-            is_available=is_available
-        )
-        db.session.add(new_nurse)
-        db.session.commit()
-        flash('Nurse created successfully!', 'success')
+            new_nurse = Nurse(
+                user_id=new_user.id,
+                license_number=license_number,
+                department_id=department_id,
+                ward_id=ward_id,
+                shift=shift,
+            )
+            db.session.add(new_nurse)
+            db.session.commit()
+            flash('Nurse created successfully!', 'success')
+            return redirect(url_for('admin_nurses'))
+    except Exception as e:
+        db.session.rollback()
+        flash(f"Error during update: {str(e)}", "danger")
         return redirect(url_for('admin_nurses'))
 
 @app.route('/admin/nurses/<int:nurse_id>/edit', methods=['GET', 'POST'])
-@role_required(UserRole.ADMIN)
+@role_required(UserRole.ADMIN, UserRole.NURSE)
 def admin_nurses_edit(nurse_id):
-    nurse = Nurse.query.get_or_404(nurse_id)
-    if request.method == 'POST':
-        nurse.user_id = request.form['user_id']
-        nurse.license_number = request.form['license_number']
-        nurse.department_id = request.form['department_id']
-        nurse.ward_id = request.form['ward_id']
-        nurse.shift = request.form['shift']
-        nurse.is_available = 'is_available' in request.form
+    try:
+        nurse = Nurse.query.get_or_404(nurse_id)
+        user = User.query.get_or_404(nurse.user_id)
+        if current_user.role == UserRole.NURSE and current_user.id != nurse.user_id:
+            flash("Dont Access Others")
+            return redirect(url_for('login'))
+        if request.method == 'POST':
+            user.username = request.form['username']
+            user.email = request.form['email']
+            user.first_name = request.form['first_name']
+            user.last_name = request.form['last_name']
+            user.phone = request.form['phone']
 
-        db.session.commit()
-        flash('Nurse updated successfully!', 'success')
+            # Handle photo update if a new photo is provided
+            photo = request.files.get('photo')
+            if photo:
+                photo_data = compress_and_encode_image(photo)
+                user.photo = photo_data
+
+            # Update nurse-specific information
+            nurse.license_number = request.form['license_number']
+            nurse.department_id = request.form['department_id']
+            nurse.ward_id = request.form['ward_id']
+            nurse.shift = request.form['shift']
+
+            db.session.commit()
+            flash('Nurse updated successfully!', 'success')
+            return redirect(url_for('admin_nurses'))
+
+    except Exception as e:
+        db.session.rollback()
+        flash(f"Error during update: {str(e)}", "danger")
         return redirect(url_for('admin_nurses'))
 
-
-@app.route('/admin/nurses/<int:nurse_id>/delete', methods=['POST'])
+@app.route('/admin/nurses/<int:nurse_id>/deactivate')
 @role_required(UserRole.ADMIN)
-def admin_nurses_delete(nurse_id):
+def admin_nurses_deactivate(nurse_id):
     nurse = Nurse.query.get_or_404(nurse_id)
-    db.session.delete(nurse)
+    nurse.user.is_active = False
     db.session.commit()
-    flash('Nurse deleted successfully!', 'success')
+    flash('Nurse Deactivated successfully!', 'success')
     return redirect(url_for('admin_nurses'))
+
+@app.route('/admin/nurses/<int:nurse_id>/activate')
+@role_required(UserRole.ADMIN)
+def admin_nurses_activate(nurse_id):
+    nurse = Nurse.query.get_or_404(nurse_id)
+    nurse.user.is_active = True
+    db.session.commit()
+    flash('Nurse Recovered successfully!', 'success')
+    return redirect(url_for('admin_nurses'))
+
+@app.route('/admin/lab_technicians')
+@role_required(UserRole.ADMIN)
+def admin_lab_technicians():
+    lab_technicians = LabTechnician.query.all()
+    return render_template('admin/admin_lab_technicians.html', lab_technicians=lab_technicians)
+
+@app.route('/admin/lab_technicians/create', methods=['GET', 'POST'])
+@role_required(UserRole.ADMIN)
+def admin_lab_technicians_create():
+    try:
+        if request.method == 'POST':
+            username = request.form['username']
+            email = request.form['email']
+            password_hash = request.form['password']
+            role = UserRole.LAB_TECHNICIAN
+            first_name = request.form['first_name']
+            last_name = request.form['last_name']
+            phone = request.form['phone']
+            photo = request.files.get('photo')
+            is_active = True
+
+            license_number = request.form['license_number']
+            specialization = request.form['specialization']
+            is_available = True
+
+            photo_data = compress_and_encode_image(photo)
+
+            new_user = User(
+                username=username,
+                email=email,
+                password_hash=password_hash,
+                role=role,
+                first_name=first_name,
+                last_name=last_name,
+                phone=phone,
+                is_active=is_active,
+                photo=photo_data
+            )
+            db.session.add(new_user)
+            db.session.commit()
+
+            new_lab_technician = LabTechnician(
+                user_id=new_user.id,
+                license_number=license_number,
+                specialization=specialization,
+                is_available=is_available
+            )
+            db.session.add(new_lab_technician)
+            db.session.commit()
+            flash('Lab Technician created successfully!', 'success')
+            return redirect(url_for('admin_lab_technicians'))
+    except Exception as e:
+        db.session.rollback()
+        flash(f"Error during creation: {str(e)}", "danger")
+        return redirect(url_for('admin_lab_technicians'))
+
+@app.route('/admin/lab_technicians/<int:technician_id>/edit', methods=['GET', 'POST'])
+@role_required(UserRole.ADMIN, UserRole.LAB_TECHNICIAN)
+def admin_lab_technicians_edit(technician_id):
+    try:
+        technician = LabTechnician.query.get_or_404(technician_id)
+        user = User.query.get_or_404(technician.user_id)
+        if current_user.role == UserRole.LAB_TECHNICIAN and current_user.id != technician.user_id:
+            flash("Dont Access Others")
+            return redirect(url_for('login'))
+        if request.method == 'POST':
+            user.username = request.form['username']
+            user.email = request.form['email']
+            user.first_name = request.form['first_name']
+            user.last_name = request.form['last_name']
+            user.phone = request.form['phone']
+
+            photo = request.files.get('photo')
+            if photo:
+                photo_data = compress_and_encode_image(photo)
+                user.photo = photo_data
+
+            technician.license_number = request.form['license_number']
+            technician.specialization = request.form['specialization']
+
+            db.session.commit()
+            flash('Lab Technician updated successfully!', 'success')
+            return redirect(url_for('admin_lab_technicians'))
+    except Exception as e:
+        db.session.rollback()
+        flash(f"Error during update: {str(e)}", "danger")
+        return redirect(url_for('admin_lab_technicians'))
+
+@app.route('/admin/lab_technicians/<int:technician_id>/deactivate')
+@role_required(UserRole.ADMIN)
+def admin_lab_technicians_deactivate(technician_id):
+    technician = LabTechnician.query.get_or_404(technician_id)
+    technician.user.is_active = False
+    db.session.commit()
+    flash('Lab Technician Deactivated successfully!', 'success')
+    return redirect(url_for('admin_lab_technicians'))
+
+@app.route('/admin/lab_technicians/<int:technician_id>/activate')
+@role_required(UserRole.ADMIN)
+def admin_lab_technicians_activate(technician_id):
+    technician = LabTechnician.query.get_or_404(technician_id)
+    technician.user.is_active = True
+    db.session.commit()
+    flash('Lab Technician Activated successfully!', 'success')
+    return redirect(url_for('admin_lab_technicians'))
+
+@app.route('/admin/pharmacists')
+@role_required(UserRole.ADMIN)
+def admin_pharmacists():
+    pharmacists = Pharmacist.query.all()
+    return render_template('admin/admin_pharmacists.html', pharmacists=pharmacists)
+
+@app.route('/admin/pharmacists/create', methods=['GET', 'POST'])
+@role_required(UserRole.ADMIN)
+def admin_pharmacists_create():
+    try:
+        if request.method == 'POST':
+            username = request.form['username']
+            email = request.form['email']
+            password_hash = request.form['password']
+            role = UserRole.PHARMACIST
+            first_name = request.form['first_name']
+            last_name = request.form['last_name']
+            phone = request.form['phone']
+            photo = request.files.get('photo')
+            is_active = True
+
+            license_number = request.form['license_number']
+            is_available = True
+
+            photo_data = compress_and_encode_image(photo)
+
+            new_user = User(
+                username=username,
+                email=email,
+                password_hash=password_hash,
+                role=role,
+                first_name=first_name,
+                last_name=last_name,
+                phone=phone,
+                is_active=is_active,
+                photo=photo_data
+            )
+            db.session.add(new_user)
+            db.session.commit()
+
+            new_pharmacist = Pharmacist(
+                user_id=new_user.id,
+                license_number=license_number,
+                is_available=is_available
+            )
+            db.session.add(new_pharmacist)
+            db.session.commit()
+            flash('Pharmacist created successfully!', 'success')
+            return redirect(url_for('admin_pharmacists'))
+    except Exception as e:
+        db.session.rollback()
+        flash(f"Error during creation: {str(e)}", "danger")
+        return redirect(url_for('admin_pharmacists'))
+
+@app.route('/admin/pharmacists/<int:pharmacist_id>/edit', methods=['GET', 'POST'])
+@role_required(UserRole.ADMIN, UserRole.PHARMACIST)
+def admin_pharmacists_edit(pharmacist_id):
+    try:
+        pharmacist = Pharmacist.query.get_or_404(pharmacist_id)
+        user = User.query.get_or_404(pharmacist.user_id)
+        if current_user.role == UserRole.PHARMACIST and current_user.id != pharmacist.user_id:
+            flash("Dont Access Others")
+            return redirect(url_for('login'))
+        if request.method == 'POST':
+            user.username = request.form['username']
+            user.email = request.form['email']
+            user.first_name = request.form['first_name']
+            user.last_name = request.form['last_name']
+            user.phone = request.form['phone']
+
+            photo = request.files.get('photo')
+            if photo:
+                photo_data = compress_and_encode_image(photo)
+                user.photo = photo_data
+
+            pharmacist.license_number = request.form['license_number']
+
+            db.session.commit()
+            flash('Pharmacist updated successfully!', 'success')
+            return redirect(url_for('admin_pharmacists'))
+    except Exception as e:
+        db.session.rollback()
+        flash(f"Error during update: {str(e)}", "danger")
+        return redirect(url_for('admin_pharmacists'))
+
+@app.route('/admin/pharmacists/<int:pharmacist_id>/deactivate')
+@role_required(UserRole.ADMIN)
+def admin_pharmacists_deactivate(pharmacist_id):
+    pharmacist = Pharmacist.query.get_or_404(pharmacist_id)
+    pharmacist.user.is_active = False
+    db.session.commit()
+    flash('Pharmacist Deactivated successfully!', 'success')
+    return redirect(url_for('admin_pharmacists'))
+
+@app.route('/admin/pharmacists/<int:pharmacist_id>/activate')
+@role_required(UserRole.ADMIN)
+def admin_pharmacists_activate(pharmacist_id):
+    pharmacist = Pharmacist.query.get_or_404(pharmacist_id)
+    pharmacist.user.is_active = True
+    db.session.commit()
+    flash('Pharmacist Activated successfully!', 'success')
+    return redirect(url_for('admin_pharmacists'))
+
+@app.route("/admin/patients")
+def admin_patients():
+    patients = Patient.query.all()
+    return render_template('admin/admin_patients.html', patients = patients)
+
+@app.route('/admin/patients/<int:patient_id>/deactivate')
+@role_required(UserRole.ADMIN)
+def admin_patients_deactivate(patient_id):
+    patient = Patient.query.get_or_404(patient_id)
+    patient.user.is_active = False
+    db.session.commit()
+    flash('Lab patient Deactivated successfully!', 'success')
+    return redirect(url_for('admin_patients'))
+
+@app.route('/admin/patients/<int:patient_id>/activate')
+@role_required(UserRole.ADMIN)
+def admin_patients_activate(patient_id):
+    patient = Patient.query.get_or_404(patient_id)
+    patient.user.is_active = True
+    db.session.commit()
+    flash('Lab patient Activated successfully!', 'success')
+    return redirect(url_for('admin_patients'))
 
 # Admin Routes for Department Management
 @app.route('/admin/departments')
@@ -830,7 +1130,6 @@ def admin_departments():
     doctors = Doctor.query.all()
     departments = Department.query.all()
     return render_template('admin/admin_departments.html', departments=departments, doctors=doctors)
-
 
 @app.route('/admin/departments/create', methods=['GET', 'POST'])
 @role_required(UserRole.ADMIN)
@@ -938,28 +1237,6 @@ def admin_wards_delete(ward_id):
     db.session.commit()
     flash('Ward deleted successfully!', 'success')
     return redirect(url_for('admin_wards'))
-
-@app.route('/admin/pharmacy', methods=['GET', 'POST'])
-def admin_pharmacists():
-    if request.method == 'POST':
-        username = request.form['username']
-        email = request.form['email']
-        password = request.form['password']
-        license_number = request.form['license_number']
-
-        user = User(username=username, email=email, password=password, role=UserRole.PHARMACIST)
-        db.session.add(user)
-        db.session.commit()
-
-        pharmacist = Pharmacist(user_id=user.id, license_number=license_number)
-        db.session.add(pharmacist)
-        db.session.commit()
-
-        flash('Pharmacist added successfully!', 'success')
-        return redirect(url_for('admin_pharmacists'))
-
-    pharmacists = Pharmacist.query.all()
-    return render_template('admin/admin_pharmacy.html', pharmacists=pharmacists)
 
 
 @app.route('/doctor/<int:user_id>')

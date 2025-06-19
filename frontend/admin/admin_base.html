@@ -2,6 +2,15 @@
 {% block title %}Admin Dashboard{% endblock %}
 {% block css %}
 <style>
+    * {
+        box-sizing: border-box;
+    }
+
+    body {
+        margin: 0;
+        font-family: Arial, sans-serif;
+    }
+
     .sidebar {
         background-color: green;
         border-radius: 0 20px 20px 0;
@@ -10,12 +19,15 @@
         left: 0;
         top: 0;
         height: 100vh;
+        transition: transform 0.3s ease;
     }
+
     .sidebar ul {
         list-style: none;
         padding: 0;
         margin: 0;
     }
+
     .sidebar a {
         text-decoration: none;
         color: white;
@@ -24,14 +36,17 @@
         padding: 5px 20px;
         border-radius: 20px;
     }
+
     .sidebar li {
         margin: 20px;
         transition: .3s all;
         border-radius: 20px;
     }
+
     .sidebar li:hover {
         background-color: rgb(0, 181, 0);
     }
+
     .last {
         position: absolute;
         bottom: 50px;
@@ -39,12 +54,14 @@
         display: flex;
         align-items: center;
     }
+
     .last p {
         font-size: 20px;
         color: white;
         cursor: pointer;
         margin: 0;
     }
+
     .last i {
         font-size: 30px;
         color: white;
@@ -52,15 +69,18 @@
         cursor: pointer;
         transition: .3s all;
     }
-    .last i:hover{
+
+    .last i:hover {
         transform: scale(1.1);
     }
-    .logout{
+
+    .logout {
         position: relative;
         right: 30px;
         display: inline-block;
         top: 2px;
     }
+
     .main-box {
         margin: 20px 20px 20px 270px;
         height: 94vh;
@@ -68,20 +88,24 @@
         border-radius: 20px;
         padding: 10px 15px;
         overflow-y: auto;
+        transition: margin-left 0.3s ease;
     }
-    .hosp{
+
+    .hosp {
         font-size: 35px;
         font-weight: bold;
-        color:white;
+        color: white;
         text-align: center;
         padding: 5px;
         margin-top: 20px;
     }
-    .link{
+
+    .link {
         background-color: white;
         color: green;
         border-radius: 0 10px 10px 0;
     }
+
     .main-box::-webkit-scrollbar {
         width: 10px;
     }
@@ -100,13 +124,53 @@
     .main-box::-webkit-scrollbar-thumb:hover {
         background-color: #0b7d0b;
     }
-</style>
-{% block admin_css %}
 
+    .sidebar-toggle {
+        display: none;
+        position: absolute;
+        top: 10px;
+        right: -65px;
+        background-color: green;
+        color: white;
+        font-size: 27px;
+        border: none;
+        border-radius: 50%;
+        padding: 5px 15px;
+        cursor: pointer;
+        z-index: 1002;
+        transition: all 0.3s ease;
+    }
+
+    @media (max-width: 768px) {
+        .sidebar {
+            transform: translateX(-100%);
+            transition: transform 0.3s ease;
+            z-index: 1000;
+            width: 250px;
+            border-radius: 0;
+        }
+
+        .sidebar.active {
+            transform: translateX(0);
+        }
+
+        .sidebar-toggle {
+            display: block;
+        }
+
+        .main-box {
+            margin: 80px 10px 20px 10px;
+        }
+    }
+</style>
+{% block admin_css %}{% endblock %}
 {% endblock %}
-{% endblock %}
+
 {% block content %}
-<div class="sidebar">
+<div class="sidebar" id="sidebar">
+    <button class="sidebar-toggle" id="sidebarToggleBtn">
+        ☰
+    </button>
     <p class="hosp">Medi<span class="link">Link</span></p>
     <nav>
         <ul>
@@ -115,8 +179,8 @@
             <li><a href="/admin/nurses">Nurses</a></li>
             <li><a href="/admin/wards">Wards</a></li>
             <li><a href="/admin/departments">Departments</a></li>
-            <li><a href="/admin/pharmacy">Pharmacy</a></li>
-            <li><a href="/admin/lab">Lab</a></li>
+            <li><a href="/admin/pharmacists">Pharmacy</a></li>
+            <li><a href="/admin/lab_technicians">Lab</a></li>
             <li><a href="/admin/patients">Patients</a></li>
         </ul>
     </nav>
@@ -131,11 +195,32 @@
 <div class="main-box">
     {% block admin_content %}{% endblock %}
 </div>
-{% block admin_js %}
+
+{% endblock %}
+{% block js %}
 <script>
-function confirmLogout() {
-  return confirm("Are you sure you want to logout?");
-}
+    document.addEventListener('DOMContentLoaded', function () {
+        const toggleBtn = document.getElementById('sidebarToggleBtn');
+        const sidebar = document.getElementById('sidebar');
+
+        toggleBtn.addEventListener('click', function () {
+            sidebar.classList.toggle('active');
+
+            // Toggle icon
+            if (sidebar.classList.contains('active')) {
+                toggleBtn.innerHTML = '⨉'; // Close icon
+            } else {
+                toggleBtn.innerHTML = '☰'; // Menu icon
+            }
+        });
+       document.addEventListener('click', function (e) {
+            if (!sidebar.contains(e.target) && !toggleBtn.contains(e.target)) {
+                sidebar.classList.remove('active');
+                toggleBtn.innerHTML = '☰';
+            }
+       });
+    });
 </script>
+{% block admin_js %}
 {% endblock %}
 {% endblock %}

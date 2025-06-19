@@ -309,6 +309,53 @@
             margin: 10px;
         }
     }
+    .action-buttons {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .btn {
+        padding: 6px 14px;
+        font-size: 14px;
+        margin: 20px 10px;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        text-decoration: none;
+        font-weight: 500;
+        transition: all 0.2s ease-in-out;
+    }
+
+    .view-btn {
+        background-color: #3498db;
+        color: white;
+    }
+
+    .edit-btn {
+        background-color: #f39c12;
+        color: white;
+    }
+
+    .activate-btn {
+        background-color: #27ae60;
+        color: white;
+    }
+
+    .deactivate-btn {
+        background-color: #e74c3c;
+        color: white;
+    }
+
+    .btn:hover {
+        filter: brightness(1.1);
+        transform: translateY(-1px);
+    }
+
+    .btn:active {
+        transform: scale(0.98);
+    }
 </style>
 {% endblock %}
 {% block admin_content %}
@@ -347,10 +394,18 @@
                         <td>{{ doctor.user.first_name }} {{ doctor.user.last_name }}</td>
                         <td>{{ doctor.license_number }}</td>
                         <td>{{ doctor.specialization }}</td>
-                        <td>
-                            <a href="{{ url_for('admin_doctor_view', doctor_id=doctor.id) }}">View</a> |
-                            <a href="{{ url_for('admin_doctors_edit', doctor_id=doctor.id) }}">Edit</a> |
-                            <a href="{{ url_for('admin_doctors_delete', doctor_id=doctor.id) }}" onclick="return confirm('Are you sure?')">Delete</a>
+                        <td class="action-buttons">
+                            <a href="{{ url_for('admin_doctor_view', doctor_id=doctor.id) }}" class="btn view-btn">View</a>
+                            <button class="btn edit-btn" id="editbtn-{{ doctor.id }}">Edit</button>
+                            {% if doctor.user.is_active %}
+                                <a href="{{ url_for('admin_doctors_deactivate', doctor_id=doctor.id) }}"
+                                class="btn deactivate-btn"
+                                onclick="return confirm('Are you sure you want to deactivate this doctor?');">Deactivate</a>
+                            {% else %}
+                                <a href="{{ url_for('admin_doctors_activate', doctor_id=doctor.id) }}"
+                                class="btn activate-btn"
+                                onclick="return confirm('Activate this doctor?');">Activate</a>
+                            {% endif %}
                         </td>
                     </tr>
                 {% endfor %}
@@ -440,12 +495,13 @@
                         <label for="department_id">Department *</label>
                         <select id="department_id" name="department_id" required>
                             <option value="" disabled selected>Select Department</option>
-                            <option value="1">Cardiology</option>
-                            <option value="2">Orthopedics</option>
-                            <option value="3">Dermatology</option>
-                            <option value="4">Neurology</option>
-                            <option value="5">Pediatrics</option>
-                            <option value="6">Gastroenterology</option>
+                            {% if departments %}
+                                {% for department in departments %}
+                                <option value="{{ department.id }}">{{ department.name }}</option> 
+                                {% endfor %}
+                            {% else %}
+                            <option value="" disabled>Please Add a Department</option>
+                            {% endif %}
                         </select>
                     </div>
                 </div>
@@ -464,6 +520,111 @@
         </form>
     </div>
 </div>
+
+{% for doctor in doctors %}
+<div id="editDoctorModal-{{ doctor.id }}" class="modal-overlay">
+    <div class="modal-content-box">
+        <form id="editDoctorForm-{{ doctor.id }}" action="{{ url_for('admin_doctors_edit', doctor_id=doctor.id) }}" method="post" enctype="multipart/form-data">
+            <div class="modal-header">
+                <h2><i class="fas fa-user-edit"></i> Edit Doctor</h2>
+                <span class="close-btn" id="closeEditModalBtn-{{ doctor.id }}">&times;</span>
+            </div>
+
+            <div class="modal-body">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="first_name-{{ doctor.id }}">First Name *</label>
+                        <input type="text" id="first_name-{{ doctor.id }}" name="first_name" value="{{ doctor.user.first_name }}" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="last_name-{{ doctor.id }}">Last Name *</label>
+                        <input type="text" id="last_name-{{ doctor.id }}" name="last_name" value="{{ doctor.user.last_name }}" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="email-{{ doctor.id }}">Email Address *</label>
+                        <input type="email" id="email-{{ doctor.id }}" name="email" value="{{ doctor.user.email }}" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="phone-{{ doctor.id }}">Phone Number</label>
+                        <input type="tel" id="phone-{{ doctor.id }}" name="phone" value="{{ doctor.user.phone }}">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="photo-{{ doctor.id }}">Profile Photo</label>
+                        <input type="file" id="photo-{{ doctor.id }}" name="photo" accept="image/*">
+                        {% if doctor.user.photo %}
+                            <img src="data:image/jpeg;base64,{{ doctor.user.photo }}" alt="Photo" width="50" height="50">
+                        {% endif %}
+                    </div>
+
+                    <!-- Account Information -->
+                    <div class="form-group">
+                        <label for="username-{{ doctor.id }}">Username *</label>
+                        <input type="text" id="username-{{ doctor.id }}" name="username" value="{{ doctor.user.username }}" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="password-{{ doctor.id }}">Password *</label>
+                        <input type="password" id="password-{{ doctor.id }}" name="password" placeholder="Leave blank to keep current password">
+                    </div>
+
+                    <!-- Professional Information -->
+                    <div class="form-group">
+                        <label for="license_number-{{ doctor.id }}">License Number *</label>
+                        <input type="text" id="license_number-{{ doctor.id }}" name="license_number" value="{{ doctor.license_number }}" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="specialization-{{ doctor.id }}">Specialization</label>
+                        <input type="text" id="specialization-{{ doctor.id }}" name="specialization" value="{{ doctor.specialization }}">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="qualification-{{ doctor.id }}">Qualification</label>
+                        <input type="text" id="qualification-{{ doctor.id }}" name="qualification" value="{{ doctor.qualification }}">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="experience_years-{{ doctor.id }}">Experience (Years)</label>
+                        <input type="number" id="experience_years-{{ doctor.id }}" name="experience_years" value="{{ doctor.experience_years }}" min="0">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="consultation_fee-{{ doctor.id }}">Consultation Fee ($)</label>
+                        <input type="number" id="consultation_fee-{{ doctor.id }}" name="consultation_fee" value="{{ doctor.consultation_fee }}" step="0.01" min="0">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="department_id-{{ doctor.id }}">Department *</label>
+                        <select id="department_id-{{ doctor.id }}" name="department_id" required>
+                            <option value="" disabled>Select Department</option>
+                            {% for department in departments %}
+                                <option value="{{ department.id }}" {% if doctor.department_id == department.id %}selected{% endif %}>
+                                    {{ department.name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" id="cancelEditBtn-{{ doctor.id }}" class="cancel-btn">
+                    <i class="fas fa-times"></i>
+                    Cancel
+                </button>
+                <button type="submit" class="submit-btn">
+                    <i class="fas fa-save"></i>
+                    Save Changes
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endfor %}
 
 {% endblock %}
 {% block admin_js %}
@@ -493,6 +654,7 @@
     });
     document.addEventListener("DOMContentLoaded", () => {
         const modal = document.getElementById('addDoctorModal');
+        const editmodal = document.getElementById('editDoctorModal');
         const openBtn = document.getElementById('openModalBtn');
         const closeBtn = document.getElementById('closeModalBtn');
         const cancelBtn = document.getElementById('cancelBtn');
@@ -518,6 +680,7 @@
                 closeModal();
             }
         });
+
 
         document.addEventListener('keydown', function (e) {
             if (e.key === 'Escape' && modal.classList.contains('show')) {
@@ -559,6 +722,108 @@
                 if (this.style.borderColor === 'rgb(220, 53, 69)' && this.value.trim()) {
                     this.style.borderColor = '#28a745';
                 }
+            });
+        });
+        // Function to open a modal by its ID
+        function openEditModal(modalId) {
+            const editmodal = document.getElementById(modalId);
+            editmodal.classList.add('show');
+            document.body.style.overflow = 'hidden';
+        }
+
+        // Function to close a modal by its ID
+        function closeEditModal(modalId) {
+            const editmodal = document.getElementById(modalId);
+            editmodal.classList.remove('show');
+            document.body.style.overflow = 'auto';
+            const formId = modalId.replace('Modal', 'Form');
+            document.getElementById(formId).reset();
+        }
+
+        // Add event listeners for all edit buttons
+        document.querySelectorAll('[id^="editbtn-"]').forEach(button => {
+            button.addEventListener('click', function() {
+                const doctorId = this.id.split('-')[1];
+                openEditModal(`editDoctorModal-${doctorId}`);
+            });
+        });
+
+        // Add event listeners for all close edit buttons
+        document.querySelectorAll('[id^="closeEditModalBtn-"]').forEach(button => {
+            button.addEventListener('click', function() {
+                const doctorId = this.id.split('-')[1];
+                closeEditModal(`editDoctorModal-${doctorId}`);
+            });
+        });
+
+        // Add event listeners for all cancel edit buttons
+        document.querySelectorAll('[id^="cancelEditBtn-"]').forEach(button => {
+            button.addEventListener('click', function() {
+                const doctorId = this.id.split('-')[1];
+                closeEditModal(`editDoctorModal-${doctorId}`);
+            });
+        });
+
+        // Add event listeners for clicking outside the modal to close it
+        document.querySelectorAll('[id^="editDoctorModal-"]').forEach(editmodal => {
+            editmodal.addEventListener('click', function(e) {
+                if (e.target === editmodal) {
+                    closeEditModal(editmodal.id);
+                }
+            });
+        });
+
+        // Add event listeners for the Escape key to close the modal
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                document.querySelectorAll('[id^="editDoctorModal-"]').forEach(editmodal => {
+                    if (editmodal.classList.contains('show')) {
+                        closeEditModal(editmodal.id);
+                    }
+                });
+            }
+        });
+
+        // Add event listeners for form validation on submit
+        document.querySelectorAll('[id^="editDoctorForm-"]').forEach(editform => {
+            editform.addEventListener('submit', function(e) {
+                const requiredFields = this.querySelectorAll('input[required], select[required]');
+                let iseValid = true;
+
+                requiredFields.forEach(field => {
+                    if (!field.value.trim()) {
+                        field.style.borderColor = '#dc3545';  // Red for invalid
+                        iseValid = false;
+                    } else {
+                        field.style.borderColor = '#28a745';  // Green for valid
+                    }
+                });
+
+                if (!iseValid) {
+                    e.preventDefault();  // Stop submission only if invalid
+                }
+            });
+        });
+
+        // Add event listeners for input validation
+        document.querySelectorAll('[id^="editDoctorForm-"]').forEach(form => {
+            const inputs = form.querySelectorAll('input, select');
+            inputs.forEach(input => {
+                input.addEventListener('blur', function() {
+                    if (this.hasAttribute('required') && !this.value.trim()) {
+                        this.style.borderColor = '#dc3545';
+                    } else if (this.value.trim()) {
+                        this.style.borderColor = '#28a745';
+                    } else {
+                        this.style.borderColor = '#e9ecef';
+                    }
+                });
+
+                input.addEventListener('input', function() {
+                    if (this.style.borderColor === 'rgb(220, 53, 69)' && this.value.trim()) {
+                        this.style.borderColor = '#28a745';
+                    }
+                });
             });
         });
     });
