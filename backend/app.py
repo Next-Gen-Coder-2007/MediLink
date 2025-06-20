@@ -564,8 +564,7 @@ def login():
             if user.role == UserRole.ADMIN:
                 return redirect(url_for('admin'))
             elif user.role == UserRole.DOCTOR:
-                user = User.query.filter_by(username=username).first()
-                return redirect(url_for('doctor', user_id=user.id))
+                return redirect(url_for('doctor'))
             elif user.role == UserRole.NURSE:
                 return redirect(url_for('nurse_dashboard'))
             elif user.role == UserRole.LAB_TECHNICIAN:
@@ -1385,13 +1384,39 @@ def admin_wards_delete(ward_id):
     flash('Ward deleted successfully!', 'success')
     return redirect(url_for('admin_wards'))
 
-
-@app.route('/doctor/<int:user_id>')
+@app.route('/doctor')
 @login_required
 @role_required(UserRole.DOCTOR)
-def doctor(user_id):
-    doctor = Doctor.query.filter_by(user_id = user_id).first()
+def doctor():
+    doctor = Doctor.query.filter_by(user_id = current_user.id).first()
     return render_template('doctor/doctor_home.html',doctor = doctor)
+
+@app.route('/doctor/appointments')
+@login_required
+@role_required(UserRole.DOCTOR)
+def doctor_appointments():
+    doctor = Doctor.query.filter_by(user_id = current_user.id).first()
+    appointments = Appointment.query.filter_by(doctor_id = doctor.id). first()
+    return render_template('doctor/doctor_appointments.html',doctor = doctor, appointments = appointments)
+
+@app.route('/doctor/prescriptions')
+@login_required
+@role_required(UserRole.DOCTOR)
+def doctor_prescriptions():
+    doctor = Doctor.query.filter_by(user_id = current_user.id).first()
+    appointments = Appointment.query.filter_by(doctor_id = doctor.id). first()
+    prescriptions = Prescription.query.filter_by(doctor_id = doctor.id). first()
+    return render_template('doctor/doctor_prescriptions.html',doctor = doctor, appointments = appointments, prescriptions = prescriptions)
+
+@app.route('/doctor/prescriptions/create', methods = ['POST'])
+@login_required
+@role_required(UserRole.DOCTOR)
+def doctor_prescriptions_create():
+    if request.method == 'POST':
+        doctor = Doctor.query.filter_by(user_id = current_user.id).first()
+        appointments = Appointment.query.filter_by(doctor_id = doctor.id). first()
+        prescriptions = Prescription.query.filter_by(doctor_id = doctor.id). first()
+        return render_template('doctor/doctor_prescriptions.html',doctor = doctor, appointments = appointments, prescriptions = prescriptions)
 
 @app.route('/patient/<int:user_id>')
 @login_required
