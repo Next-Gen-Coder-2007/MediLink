@@ -1,0 +1,588 @@
+{% extends 'doctor/doctor_base.html' %}
+{% block doctor_css %}
+<style>
+    .main-container {
+        width: 100%;
+        height: 100%;
+    }
+
+    .title {
+        text-align: left;
+        color: green;
+        font-size: 35px;
+        font-weight: bold;
+    }
+
+    .title-box {
+        width: 100%;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .prescriptions {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+    }
+
+    .add-btn {
+        padding: 8px 16px;
+        text-decoration: none;
+        background-color: green;
+        color: white;
+        border-radius: 8px;
+        font-weight: 500;
+        transition: transform 0.3s, box-shadow 0.3s;
+        border: none;
+        cursor: pointer;
+    }
+
+    .add-btn:hover {
+        transform: scale(1.05);
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    }
+
+    .search-prescriptions {
+        width: 100%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 10px 20px;
+        border-radius: 50px;
+        box-shadow: 0 0 10px 1px rgba(0, 0, 0, 0.3);
+        margin: 20px 0;
+    }
+
+    #searchprescriptions {
+        width: 70%;
+        font-size: 20px;
+        background-color: transparent;
+        margin-right: 20px;
+        border: none;
+    }
+
+    #prescriptionDate {
+        margin-left: 20px;
+        font-size: 15px;
+        background-color: transparent;
+        border: 1px dotted lightgray;
+        padding: 10px;
+        border-radius: 10px;
+    }
+
+    .search-prescriptions select {
+        font-size: 15px;
+        background-color: transparent;
+        border: 1px dotted lightgray;
+        padding: 10px;
+        border-radius: 10px;
+    }
+
+    #searchprescriptions:focus {
+        outline: none;
+    }
+
+    .prescriptions-table {
+        width: 100%;
+        max-height: 40vh;
+        overflow-y: auto;
+        border: 1px solid #ccc;
+        border-radius: 10px;
+        margin-bottom: 100px;
+    }
+
+    .prescriptions-table table {
+        width: 100%;
+        border-collapse: collapse;
+        font-family: Arial, sans-serif;
+    }
+
+    .prescriptions-table th,
+    .prescriptions-table td {
+        padding: 12px 15px;
+        text-align: center;
+        border-bottom: 1px solid #ddd;
+    }
+
+    .prescriptions-table th {
+        background-color: green;
+        color: white;
+        font-size: 16px;
+        position: sticky;
+        top: 0;
+        z-index: 1;
+    }
+
+    .prescriptions-table td {
+        background-color: #fff;
+    }
+
+    .prescriptions-table::-webkit-scrollbar {
+        width: 10px;
+    }
+
+    .prescriptions-table::-webkit-scrollbar-track {
+        background: #e0f2e0;
+        border-radius: 10px;
+    }
+
+    .prescriptions-table::-webkit-scrollbar-thumb {
+        background-color: green;
+        border-radius: 10px;
+        border: 2px solid #e0f2e0;
+    }
+
+    .prescriptions-table::-webkit-scrollbar-thumb:hover {
+        background-color: #0b7d0b;
+    }
+
+    /* Modal Styles */
+    .modal-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: rgba(0, 0, 0, 0.7);
+        z-index: 1000;
+        justify-content: center;
+        align-items: center;
+        backdrop-filter: blur(5px);
+        animation: fadeIn 0.3s ease-in-out;
+    }
+
+    .modal-overlay.show {
+        display: flex;
+    }
+
+    .modal-content-box {
+        background: white;
+        width: 90%;
+        max-width: 800px;
+        max-height: 90vh;
+        overflow-y: auto;
+        border-radius: 20px;
+        position: relative;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        transform: scale(0.7);
+        opacity: 0;
+        transition: all 0.3s ease;
+    }
+
+    .modal-overlay.show .modal-content-box {
+        transform: scale(1);
+        opacity: 1;
+    }
+
+    .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 25px 30px;
+        background-color: green;
+        color: white;
+        border-radius: 20px 20px 0 0;
+    }
+
+    .modal-header h2 {
+        margin: 0;
+        font-size: 24px;
+        font-weight: 600;
+    }
+
+    .close-btn {
+        font-size: 28px;
+        cursor: pointer;
+        color: white;
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        transition: all 0.3s ease;
+    }
+
+    .close-btn:hover {
+        background: rgba(255, 255, 255, 0.2);
+        transform: rotate(90deg);
+    }
+
+    .modal-body {
+        padding: 30px;
+    }
+
+    .form-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 20px;
+    }
+
+    .form-group {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .form-group label {
+        font-weight: 600;
+        color: #495057;
+        margin-bottom: 8px;
+        font-size: 14px;
+    }
+
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+        padding: 12px 16px;
+        border: 2px solid #e9ecef;
+        border-radius: 10px;
+        font-size: 14px;
+        transition: all 0.3s ease;
+        background: white;
+    }
+
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
+        outline: none;
+        border-color: #28a745;
+        box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.1);
+    }
+
+    .form-group input[type="file"] {
+        padding: 8px 12px;
+        border: 2px dashed #e9ecef;
+        background: #f8f9fa;
+    }
+
+    .modal-footer {
+        padding: 20px 30px;
+        display: flex;
+        justify-content: flex-end;
+        gap: 15px;
+        background: #f8f9fa;
+        border-radius: 0 0 20px 20px;
+    }
+
+    .submit-btn,
+    .cancel-btn {
+        padding: 12px 30px;
+        border: none;
+        border-radius: 25px;
+        cursor: pointer;
+        font-weight: 600;
+        font-size: 14px;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .submit-btn {
+        background-color: green;
+        color: white;
+        box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+    }
+
+    .submit-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(40, 167, 69, 0.4);
+    }
+
+    .cancel-btn {
+        background: black;
+        color: white;
+    }
+
+    .cancel-btn:hover {
+        background: #5a6268;
+        transform: translateY(-2px);
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+        }
+        to {
+            opacity: 1;
+        }
+    }
+
+    /* Table inside modal */
+    #prescriptionItemsTable {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 20px 0;
+    }
+
+    #prescriptionItemsTable th,
+    #prescriptionItemsTable td {
+        padding: 12px;
+        text-align: left;
+        border-bottom: 1px solid #ddd;
+    }
+
+    #prescriptionItemsTable th {
+        background-color: green;
+        color: white;
+    }
+
+    #prescriptionItemsTable input {
+        width: 100%;
+        padding: 8px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        box-sizing: border-box;
+    }
+</style>
+{% endblock %}
+{% block doctor_content %}
+<div class="main-container">
+    <div class="title-box">
+        <div class="title">Prescriptions</div>
+        <button id="openModalBtn" class="add-btn">+ Add Prescription</button>
+    </div>
+    <div class="prescriptions">
+        <div class="search-prescriptions">
+            <input type="text" name="searchprescriptions" id="searchprescriptions" placeholder="Enter Patient Name">
+            <select name="status" id="status">
+                <option value="" disabled selected>Select Status</option>
+                <option value="PRESCRIBED">Prescribed</option>
+                <option value="DISPENSED">Dispensed</option>
+                <option value="CANCELLED">Cancelled</option>
+            </select>
+            <input type="date" name="prescriptionDate" id="prescriptionDate">
+        </div>
+        <div class="prescriptions-table">
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Patient Name</th>
+                        <th>Prescription Date & Time</th>
+                        <th>Status</th>
+                        <th>Notes</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if prescriptions %}
+                    {% for prescription in prescriptions %}
+                    <tr>
+                        <td>{{ prescription.id }}</td>
+                        <td>{{ prescription.patient.user.first_name }} {{ prescription.patient.user.last_name }}</td>
+                        <td>{{ prescription.prescription_date }} & {{ prescription.prescription_time }}</td>
+                        <td>{{ prescription.status }}</td>
+                        <td>{{ prescription.notes }}</td>
+                        <td>
+                            <button>View</button>
+                            <button>Edit</button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    {% else %}
+                    <tr>
+                        <td colspan="6">No Prescriptions Found</td>
+                    </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+<div id="addprescriptionModal" class="modal-overlay">
+    <div class="modal-content-box">
+        <form id="prescriptionForm" action="/prescriptions/create" method="post">
+            <div class="modal-header">
+                <h2><i class="fas fa-prescription"></i> Add Prescription</h2>
+                <span class="close-btn" id="closeModalBtn">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="form-grid">
+                    <!-- Patient Selection -->
+                    <div class="form-group">
+                        <label for="patient_id">Patient Name *</label>
+                        <select id="patient_id" name="patient_id" required>
+                            <option value="" disabled selected>Select Patient</option>
+                            <!-- Options will be populated dynamically -->
+                        </select>
+                    </div>
+                    <!-- Appointment Selection -->
+                    <div class="form-group">
+                        <label for="appointment_id">Appointment *</label>
+                        <select id="appointment_id" name="appointment_id" required>
+                            <option value="" disabled selected>Select Appointment</option>
+                            <!-- Options will be populated dynamically -->
+                        </select>
+                    </div>
+                    <!-- Other Prescription Information -->
+                    <div class="form-group">
+                        <label for="doctor_id">Doctor ID *</label>
+                        <input type="number" id="doctor_id" name="doctor_id" required readonly>
+                    </div>
+                    <div class="form-group">
+                        <label for="prescription_date">Prescription Date *</label>
+                        <input type="date" id="prescription_date" name="prescription_date" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="status">Status *</label>
+                        <select id="status" name="status" required>
+                            <option value="PRESCRIBED">Prescribed</option>
+                            <option value="DISPENSED">Dispensed</option>
+                            <option value="CANCELLED">Cancelled</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="notes">Notes</label>
+                        <textarea id="notes" name="notes"></textarea>
+                    </div>
+                    <!-- Table for Prescription Items -->
+                    <table id="prescriptionItemsTable">
+                        <thead>
+                            <tr>
+                                <th>Medicine ID</th>
+                                <th>Dosage</th>
+                                <th>Quantity</th>
+                                <th>Duration (Days)</th>
+                                <th>Instructions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><input type="number" name="medicine_id[]" required></td>
+                                <td><input type="text" name="dosage[]" required></td>
+                                <td><input type="number" name="quantity[]" required></td>
+                                <td><input type="number" name="duration_days[]"></td>
+                                <td><input type="text" name="instructions[]"></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <button type="button" onclick="addPrescriptionItemRow()">Add Another Medicine</button>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" id="cancelBtn" class="cancel-btn">
+                    <i class="fas fa-times"></i> Cancel
+                </button>
+                <button type="submit" class="submit-btn">
+                    <i class="fas fa-plus"></i> Add Prescription
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+{% block doctor_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const searchInput = document.getElementById('searchprescriptions');
+        const tableRows = document.querySelectorAll('.prescriptions-table tbody tr');
+
+        searchInput.addEventListener('keyup', function () {
+            const filter = searchInput.value.toLowerCase();
+
+            tableRows.forEach(row => {
+                const cells = row.querySelectorAll('td');
+                let matchFound = false;
+
+                cells.forEach(cell => {
+                    if (cell.textContent.toLowerCase().includes(filter)) {
+                        matchFound = true;
+                    }
+                });
+
+                row.style.display = matchFound ? '' : 'none';
+            });
+        });
+
+        const modal = document.getElementById('addprescriptionModal');
+        const openBtn = document.getElementById('openModalBtn');
+        const closeBtn = document.getElementById('closeModalBtn');
+        const cancelBtn = document.getElementById('cancelBtn');
+        const form = document.getElementById('prescriptionForm');
+
+        function openModal() {
+            modal.classList.add('show');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeModal() {
+            modal.classList.remove('show');
+            document.body.style.overflow = 'auto';
+            form.reset();
+        }
+
+        openBtn.addEventListener('click', openModal);
+        closeBtn.addEventListener('click', closeModal);
+        cancelBtn.addEventListener('click', closeModal);
+
+        modal.addEventListener('click', function (e) {
+            if (e.target === modal) {
+                closeModal();
+            }
+        });
+
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape' && modal.classList.contains('show')) {
+                closeModal();
+            }
+        });
+
+        document.getElementById('prescriptionForm').addEventListener('submit', function (e) {
+            const requiredFields = form.querySelectorAll('input[required], select[required]');
+            let isValid = true;
+
+            requiredFields.forEach(field => {
+                if (!field.value.trim()) {
+                    field.style.borderColor = '#dc3545';  // Red for invalid
+                    isValid = false;
+                } else {
+                    field.style.borderColor = '#28a745';  // Green for valid
+                }
+            });
+
+            if (!isValid) {
+                e.preventDefault();  // Stop submission only if invalid
+            }
+        });
+
+        const inputs = form.querySelectorAll('input, select, textarea');
+        inputs.forEach(input => {
+            input.addEventListener('blur', function () {
+                if (this.hasAttribute('required') && !this.value.trim()) {
+                    this.style.borderColor = '#dc3545';
+                } else if (this.value.trim()) {
+                    this.style.borderColor = '#28a745';
+                } else {
+                    this.style.borderColor = '#e9ecef';
+                }
+            });
+
+            input.addEventListener('input', function () {
+                if (this.style.borderColor === 'rgb(220, 53, 69)' && this.value.trim()) {
+                    this.style.borderColor = '#28a745';
+                }
+            });
+        });
+    });
+
+    function addPrescriptionItemRow() {
+        const table = document.getElementById('prescriptionItemsTable').getElementsByTagName('tbody')[0];
+        const newRow = table.insertRow();
+
+        newRow.innerHTML = `
+            <tr>
+                <td><input type="number" name="medicine_id[]" required></td>
+                <td><input type="text" name="dosage[]" required></td>
+                <td><input type="number" name="quantity[]" required></td>
+                <td><input type="number" name="duration_days[]"></td>
+                <td><input type="text" name="instructions[]"></td>
+            </tr>
+        `;
+    }
+</script>
+{% endblock %}
